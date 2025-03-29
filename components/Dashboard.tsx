@@ -169,16 +169,16 @@ const Dashboard = () => {
   }, [status]);
 
   return (
-    <div className="flex-1 container mx-auto px-4 py-8">
+    <div className="flex-1 container mx-auto px-4 py-6">
       {/* Welcome Section */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="card mb-8 bg-gradient-to-r from-primary/20 to-accent/20"
+        className="card mb-6 bg-gradient-to-r from-primary/20 to-accent/20"
       >
-        <h2 className="text-2xl font-semibold mb-2">Welcome back, {session?.user?.name || 'Fitness Warrior'}!</h2>
-        <p className="mb-4">Track your progress, plan your workouts, and crush your goals.</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h2 className="text-xl md:text-2xl font-semibold mb-2">Welcome back, {session?.user?.name || 'Fitness Warrior'}!</h2>
+        <p className="mb-4 text-sm md:text-base">Track your progress, plan your workouts, and crush your goals.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <StatCard 
             icon={<FaDumbbell />} 
             title="Workouts" 
@@ -198,56 +198,60 @@ const Dashboard = () => {
             title="Avg. Heart Rate" 
             value="--"
             subtitle="BPM"
-            loading={false}
+            loading={loading.profile}
           />
           <StatCard 
             icon={<FaWeight />} 
             title="Current Weight" 
-            value={stats.currentWeight ? `${stats.currentWeight}` : "--"}
-            subtitle="kg"
+            value={stats.currentWeight ? `${stats.currentWeight} kg` : '--'}
+            subtitle="Kilograms"
             loading={loading.profile}
           />
         </div>
       </motion.div>
-
-      {/* Tabs */}
-      <div className="flex mb-6 space-x-4 border-b">
+      
+      {/* Tabs Section */}
+      <div className="mb-6 flex flex-wrap overflow-x-auto space-x-2 pb-2">
         <TabButton 
           active={activeTab === 'workouts'} 
-          onClick={() => setActiveTab('workouts')}
-          icon={<FaDumbbell />}
+          onClick={() => setActiveTab('workouts')} 
+          icon={<FaDumbbell />} 
           text="Workouts"
         />
         <TabButton 
           active={activeTab === 'progress'} 
-          onClick={() => setActiveTab('progress')}
-          icon={<FaChartLine />}
+          onClick={() => setActiveTab('progress')} 
+          icon={<FaChartLine />} 
           text="Progress"
         />
         <TabButton 
           active={activeTab === 'schedule'} 
-          onClick={() => setActiveTab('schedule')}
-          icon={<FaCalendarCheck />}
+          onClick={() => setActiveTab('schedule')} 
+          icon={<FaCalendarCheck />} 
           text="Schedule"
         />
       </div>
-
-      {/* Content based on active tab */}
-      <div className="pb-10">
+      
+      {/* Content Section */}
+      <div className="pb-6">
         {activeTab === 'workouts' && (
           <WorkoutsPanel 
             workouts={workouts} 
-            loading={loading.workouts}
+            loading={loading.workouts} 
             error={error}
           />
         )}
+        
         {activeTab === 'progress' && (
           <ProgressPanel 
             chartData={chartData}
             loading={loading.progress}
           />
         )}
-        {activeTab === 'schedule' && <SchedulePanel />}
+        
+        {activeTab === 'schedule' && (
+          <SchedulePanel />
+        )}
       </div>
     </div>
   );
@@ -267,21 +271,20 @@ const StatCard = ({
   loading: boolean
 }) => {
   return (
-    <div className="bg-white dark:bg-dark/50 rounded-lg p-4 shadow-sm flex items-center space-x-4">
-      <div className="bg-primary/20 p-3 rounded-full text-primary">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 md:p-4 flex items-center">
+      <div className="mr-3 md:mr-4 bg-primary/10 text-primary p-2 md:p-3 rounded-lg">
         {icon}
       </div>
       <div>
-        <h3 className="font-medium">{title}</h3>
         {loading ? (
           <div className="flex items-center">
-            <FaSpinner className="animate-spin text-gray-400 mr-2" />
-            <span className="text-gray-400">Loading...</span>
+            <FaSpinner className="animate-spin mr-2" />
+            <span className="text-gray-500">Loading...</span>
           </div>
         ) : (
           <>
-            <p className="text-2xl font-bold">{value}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+            <div className="text-lg md:text-xl font-semibold">{value}</div>
+            <div className="text-xs md:text-sm text-gray-500">{title} • {subtitle}</div>
           </>
         )}
       </div>
@@ -291,16 +294,16 @@ const StatCard = ({
 
 const TabButton = ({ active, onClick, icon, text }: { active: boolean, onClick: () => void, icon: React.ReactNode, text: string }) => {
   return (
-    <button 
-      className={`flex items-center gap-2 px-4 py-2 border-b-2 font-medium ${
-        active 
-          ? 'border-primary text-primary' 
-          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-      }`}
+    <button
       onClick={onClick}
+      className={`px-3 py-2 md:px-4 md:py-2 rounded-lg flex items-center text-sm md:text-base whitespace-nowrap ${
+        active 
+          ? 'bg-primary text-white' 
+          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+      }`}
     >
-      {icon}
-      {text}
+      <span className="mr-2">{icon}</span>
+      <span>{text}</span>
     </button>
   );
 };
@@ -314,68 +317,88 @@ const WorkoutsPanel = ({
   loading: boolean,
   error: string | null
 }) => {
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-12">
+        <FaSpinner className="animate-spin text-primary text-2xl mr-3" />
+        <span>Loading your workouts...</span>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        {error}
+      </div>
+    );
+  }
+  
+  if (workouts.length === 0) {
+    return (
+      <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <FaDumbbell className="mx-auto text-4xl text-gray-400 mb-4" />
+        <h3 className="text-xl font-semibold mb-2">No Workouts Yet</h3>
+        <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+          Start tracking your fitness journey by adding your first workout.
+        </p>
+        <Link href="/workouts/new" className="btn-primary inline-flex items-center">
+          <FaPlus className="mr-2" />
+          Add First Workout
+        </Link>
+      </div>
+    );
+  }
+  
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">Recent Workouts</h2>
-        <Link href="/workouts/new" className="btn-primary flex items-center gap-2">
-          <FaPlus />
-          Add Workout
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg md:text-xl font-semibold">Recent Workouts</h3>
+        <Link href="/workouts/new" className="btn-primary text-sm flex items-center gap-1">
+          <FaPlus size={12} />
+          <span>New Workout</span>
         </Link>
       </div>
       
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <FaSpinner className="animate-spin text-primary text-3xl mr-3" />
-          <p className="text-gray-500">Loading workouts...</p>
-        </div>
-      ) : error ? (
-        <div className="p-4 bg-red-100 text-red-700 rounded-lg">
-          {error}
-        </div>
-      ) : workouts.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 mb-4">You haven't logged any workouts yet.</p>
-          <Link href="/workouts/new" className="btn-primary">
-            Log Your First Workout
-          </Link>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {workouts.map(workout => (
-            <div key={workout.id} className="card hover:shadow-lg transition-shadow">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-semibold">{workout.name}</h3>
-                  <p className="text-gray-500 dark:text-gray-400">
-                    {new Date(workout.date).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="bg-primary/10 text-primary p-2 rounded-full">
-                  <FaDumbbell />
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {workouts.slice(0, 6).map((workout) => (
+          <Link href={`/workouts/${workout.id}`} key={workout.id}>
+            <motion.div 
+              whileHover={{ scale: 1.02 }}
+              className="card hover:shadow-lg transition-shadow cursor-pointer border border-gray-200 dark:border-gray-700"
+            >
+              <div className="text-lg font-semibold mb-1">{workout.name}</div>
+              <div className="text-sm text-gray-500 mb-2">
+                {new Date(workout.date).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                })}
               </div>
-              {workout.notes && (
-                <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm line-clamp-2">
-                  {workout.notes}
-                </p>
+              
+              {workout.exercises && workout.exercises.length > 0 ? (
+                <div className="text-sm">
+                  <div className="font-medium text-gray-700 dark:text-gray-300">
+                    {workout.exercises.length} Exercise{workout.exercises.length !== 1 ? 's' : ''}
+                  </div>
+                  <div className="text-gray-500 mt-1 line-clamp-2">
+                    {workout.exercises.map(ex => ex.name).join(', ')}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">No exercises recorded</div>
               )}
-              <div className="flex justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Exercises</p>
-                  <p className="font-medium">{workout.exercises?.length || "--"}</p>
-                </div>
-                <div className="text-right">
-                  <Link
-                    href={`/workouts/${workout.id}`}
-                    className="text-primary hover:text-blue-700"
-                  >
-                    Details
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
+            </motion.div>
+          </Link>
+        ))}
+      </div>
+      
+      {workouts.length > 6 && (
+        <div className="text-center mt-6">
+          <Link href="/workouts" className="text-primary hover:text-primary-dark transition-colors">
+            View All Workouts
+          </Link>
         </div>
       )}
     </div>
@@ -389,56 +412,63 @@ const ProgressPanel = ({
   chartData: any, 
   loading: boolean 
 }) => {
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center p-12">
+        <FaSpinner className="animate-spin text-primary text-2xl mr-3" />
+        <span>Loading your progress data...</span>
+      </div>
+    );
+  }
+  
+  if (!chartData) {
+    return (
+      <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <h3 className="text-xl font-semibold mb-2">No Data Yet</h3>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          Start tracking your weight to see progress over time.
+        </p>
+      </div>
+    );
+  }
+  
   return (
     <div>
-      <h2 className="text-xl font-bold mb-6">Your Progress</h2>
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <FaSpinner className="animate-spin text-primary text-3xl mr-3" />
-          <p className="text-gray-500">Loading progress data...</p>
+      <div className="card">
+        <h3 className="text-lg md:text-xl font-semibold mb-4">Weight Progress</h3>
+        <div className="h-64 md:h-80">
+          <Line 
+            data={chartData} 
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  beginAtZero: false,
+                },
+              },
+            }} 
+          />
         </div>
-      ) : !chartData ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No progress data available yet.</p>
-        </div>
-      ) : (
-        <div className="card mb-8">
-          <h3 className="text-lg font-semibold mb-4">Weight Progress</h3>
-          <div className="h-80">
-            <Line 
-              data={chartData} 
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  y: {
-                    beginAtZero: false
-                  }
-                }
-              }} 
-            />
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
 
 const SchedulePanel = () => {
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-6">Your Schedule</h2>
-      <div className="card text-center py-12">
-        <h3 className="text-lg font-semibold mb-4">Coming Soon!</h3>
-        <p className="text-gray-500 mb-6">The scheduler feature is under development</p>
-        <button className="btn-primary">Get Notified</button>
-      </div>
+    <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <h3 className="text-xl font-semibold mb-2">Coming Soon</h3>
+      <p className="text-gray-600 dark:text-gray-400">
+        Workout scheduling will be available in a future update.
+      </p>
     </div>
   );
 };
 
+// Export for use in other components
 const FaChartLine = () => {
-  return <span className="text-current">📈</span>;
+  return <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M496 384H64V80c0-8.84-7.16-16-16-16H16C7.16 64 0 71.16 0 80v336c0 17.67 14.33 32 32 32h464c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16zM464 96H345.94c-21.38 0-32.09 25.85-16.97 40.97l32.4 32.4L288 242.75l-73.37-73.37c-12.5-12.5-32.76-12.5-45.25 0l-68.69 68.69c-6.25 6.25-6.25 16.38 0 22.63l22.62 22.62c6.25 6.25 16.38 6.25 22.63 0L192 237.25l73.37 73.37c12.5 12.5 32.76 12.5 45.25 0l96-96 32.4 32.4c15.12 15.12 40.97 4.41 40.97-16.97V112c.01-8.84-7.15-16-15.99-16z"></path></svg>;
 };
 
 export default Dashboard; 

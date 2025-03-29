@@ -2,18 +2,19 @@
 
 import React from 'react';
 import { FaHeart, FaGithub, FaTwitter, FaInstagram } from 'react-icons/fa';
+import Link from 'next/link';
 
 const Footer = () => {
   return (
-    <footer className="bg-dark text-white py-8">
+    <footer className="bg-dark text-white py-6 md:py-8">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
           <div>
-            <h3 className="text-xl font-bold mb-4">GymBro</h3>
-            <p className="text-gray-300 mb-4">
+            <h3 className="text-lg md:text-xl font-bold mb-3 md:mb-4">GymBro</h3>
+            <p className="text-gray-300 text-sm md:text-base mb-4">
               Track your fitness journey, get workout recommendations, and stay motivated.
             </p>
-            <div className="flex space-x-4">
+            <div className="flex space-x-3">
               <SocialIcon icon={<FaGithub />} />
               <SocialIcon icon={<FaTwitter />} />
               <SocialIcon icon={<FaInstagram />} />
@@ -21,27 +22,27 @@ const Footer = () => {
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              <FooterLink text="Workouts" />
-              <FooterLink text="Progress Tracking" />
-              <FooterLink text="Schedule" />
-              <FooterLink text="Settings" />
+            <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Quick Links</h3>
+            <ul className="space-y-2 text-sm md:text-base">
+              <FooterLink text="Workouts" href="/workouts" />
+              <FooterLink text="Statistics" href="/statistics" />
+              <FooterLink text="Profile" href="/profile" />
+              <FooterLink text="Settings" href="/settings" />
             </ul>
           </div>
           
           <div>
-            <h3 className="text-lg font-semibold mb-4">Support</h3>
-            <ul className="space-y-2">
-              <FooterLink text="Help Center" />
-              <FooterLink text="Privacy Policy" />
-              <FooterLink text="Terms of Service" />
-              <FooterLink text="Contact Us" />
+            <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Support</h3>
+            <ul className="space-y-2 text-sm md:text-base">
+              <FooterLink text="Help Center" href="/help" />
+              <FooterLink text="About" href="/about" />
+              <FooterLink text="Terms of Service" href="#" />
+              <FooterLink text="Contact Us" href="#" />
             </ul>
           </div>
         </div>
         
-        <div className="mt-8 pt-6 border-t border-gray-700 text-center text-gray-400">
+        <div className="mt-6 md:mt-8 pt-4 md:pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
           <p className="flex items-center justify-center">
             Made with <FaHeart className="text-red-500 mx-1" /> for fitness enthusiasts
           </p>
@@ -56,19 +57,20 @@ const SocialIcon = ({ icon }: { icon: React.ReactNode }) => {
   return (
     <a 
       href="#" 
-      className="bg-gray-700 p-2 rounded-full hover:bg-primary transition-colors"
+      className="bg-gray-700 p-2 rounded-full hover:bg-primary transition-colors text-sm md:text-base"
+      aria-label="Social media"
     >
       {icon}
     </a>
   );
 };
 
-const FooterLink = ({ text }: { text: string }) => {
+const FooterLink = ({ text, href }: { text: string, href: string }) => {
   return (
     <li>
-      <a href="#" className="text-gray-300 hover:text-white transition-colors">
+      <Link href={href} className="text-gray-300 hover:text-white transition-colors">
         {text}
-      </a>
+      </Link>
     </li>
   );
 };

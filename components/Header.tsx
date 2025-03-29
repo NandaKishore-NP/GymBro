@@ -27,6 +27,8 @@ const Header = () => {
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+    // Close profile dropdown if it's open
+    if (isProfileOpen) setIsProfileOpen(false);
   };
 
   const toggleProfile = () => {
@@ -43,18 +45,18 @@ const Header = () => {
 
   return (
     <header className="bg-gradient-to-r from-primary to-accent shadow-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div className="container mx-auto px-4 py-2 md:py-3 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer">
-              <FaDumbbell className="text-white text-2xl" />
-              <h1 className="text-white font-bold text-2xl">GymBro</h1>
+              <FaDumbbell className="text-white text-xl md:text-2xl" />
+              <h1 className="text-white font-bold text-lg md:text-2xl">GymBro</h1>
             </div>
           </Link>
         </div>
         
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex space-x-6">
+        <nav className="hidden md:flex space-x-4 lg:space-x-6">
           <NavItem 
             href="/" 
             icon={<FaDumbbell />} 
@@ -87,14 +89,14 @@ const Header = () => {
                 className="flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
               >
                 <FaUser />
-                <span>{session?.user?.name}</span>
+                <span className="max-w-[100px] truncate">{session?.user?.name}</span>
               </button>
               
               {isProfileOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg overflow-hidden"
+                  className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg overflow-hidden z-20"
                 >
                   <div className="py-1">
                     <Link
@@ -145,7 +147,11 @@ const Header = () => {
         </nav>
         
         {/* Mobile Menu Button */}
-        <button className="md:hidden text-white p-2" onClick={toggleMenu}>
+        <button 
+          className="md:hidden text-white p-2 focus:outline-none" 
+          onClick={toggleMenu}
+          aria-label="Toggle menu"
+        >
           {isMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
         </button>
       </div>
@@ -153,11 +159,13 @@ const Header = () => {
       {/* Mobile Navigation */}
       {isMenuOpen && (
         <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="md:hidden bg-gray-800 dark:bg-gray-900"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.2 }}
+          className="md:hidden bg-gray-800 dark:bg-gray-900 overflow-hidden"
         >
-          <div className="container mx-auto px-4 py-4 flex flex-col space-y-2">
+          <div className="container mx-auto px-4 py-2 flex flex-col space-y-1">
             <MobileNavItem 
               href="/" 
               icon={<FaDumbbell />} 
@@ -189,8 +197,8 @@ const Header = () => {
             
             {isAuthenticated ? (
               <>
-                <div className="border-t border-gray-700 my-2"></div>
-                <div className="px-2 py-1 text-gray-400">
+                <div className="border-t border-gray-700 my-1"></div>
+                <div className="px-2 py-1 text-gray-400 text-sm">
                   Signed in as {session?.user?.name}
                 </div>
                 
@@ -210,14 +218,14 @@ const Header = () => {
                   onClick={() => setIsMenuOpen(false)}
                 />
                 
-                <div className="border-t border-gray-700 my-2"></div>
+                <div className="border-t border-gray-700 my-1"></div>
                 
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center gap-3 text-red-400 hover:text-red-300 p-2 transition-colors"
+                  className="flex items-center gap-3 text-red-400 hover:text-red-300 p-2 transition-colors w-full"
                 >
                   <FaSignOutAlt />
-                  <span className="text-lg">Sign out</span>
+                  <span>Sign out</span>
                 </button>
               </>
             ) : (
@@ -248,16 +256,15 @@ const NavItem = ({
   isActive: boolean;
 }) => {
   return (
-    <Link 
-      href={href} 
-      className={`flex items-center gap-2 transition-colors ${
+    <Link href={href}>
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
         isActive 
-          ? 'text-white font-medium' 
-          : 'text-white/80 hover:text-white'
-      }`}
-    >
-      {icon}
-      <span>{text}</span>
+          ? 'text-white bg-white/10' 
+          : 'text-gray-200 hover:text-white hover:bg-white/5'
+      }`}>
+        {icon}
+        <span>{text}</span>
+      </div>
     </Link>
   );
 };
@@ -276,17 +283,15 @@ const MobileNavItem = ({
   onClick?: () => void;
 }) => {
   return (
-    <Link 
-      href={href} 
-      className={`flex items-center gap-3 p-2 transition-colors rounded-md ${
+    <Link href={href} onClick={onClick}>
+      <div className={`flex items-center gap-3 p-2 rounded ${
         isActive 
-          ? 'bg-gray-700 text-white' 
-          : 'text-white/80 hover:text-white hover:bg-gray-700/50'
-      }`}
-      onClick={onClick}
-    >
-      {icon}
-      <span className="text-lg">{text}</span>
+          ? 'text-white bg-primary/20' 
+          : 'text-gray-300 hover:text-white'
+      }`}>
+        {icon}
+        <span>{text}</span>
+      </div>
     </Link>
   );
 };
