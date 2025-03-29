@@ -18,6 +18,8 @@ GymBro is a modern fitness tracking application that helps you monitor your gym 
 - **Chart.js:** For data visualization
 - **Framer Motion:** For animations and transitions
 - **React Icons:** For beautiful icons
+- **SQLite:** For data storage
+- **Next Auth:** For authentication
 
 ## Getting Started
 
@@ -42,12 +44,32 @@ cd gymbro
 npm install
 ```
 
-4. Start the development server
+4. Run the setup script to initialize the environment and database
+```bash
+npm run setup
+```
+   This will:
+   - Create a `.env.local` file with required environment variables
+   - Set up the database directory
+   - Initialize the database with sample data
+   
+   Or manually create an `.env.local` file in the root directory with the following variables:
+   ```
+   NEXTAUTH_SECRET=your-secret-key-here
+   NEXTAUTH_URL=http://localhost:3000
+   ```
+
+5. Start the development server
 ```bash
 npm run dev
 ```
 
-5. Open http://localhost:3000 in your browser
+6. Open http://localhost:3000 in your browser
+
+### Test User Credentials
+After running the setup script, you can login with:
+- Email: test@example.com
+- Password: password123
 
 ## Deployment
 

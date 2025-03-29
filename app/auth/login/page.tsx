@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FaUser, FaLock, FaDumbbell } from 'react-icons/fa';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams?.get('callbackUrl') || '/';
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -37,8 +40,8 @@ export default function LoginPage() {
         return;
       }
       
-      // Redirect to dashboard on success
-      router.push('/');
+      // Redirect to callbackUrl or dashboard on success
+      router.push(callbackUrl);
       router.refresh();
     } catch (error) {
       console.error('Login error:', error);
