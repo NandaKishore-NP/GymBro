@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
         }
         
         // Check if user already exists
-        const existingUser = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+        const existingUser = db!.prepare("SELECT * FROM users WHERE email = ?").get(email);
         
         if (existingUser) {
           return NextResponse.json(
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
         }
         
         // Insert user into database
-        const insertStmt = db.prepare(
+        const insertStmt = db!.prepare(
           "INSERT INTO users (name, email, password) VALUES (?, ?, ?)"
         );
         
