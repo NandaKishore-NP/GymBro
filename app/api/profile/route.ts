@@ -8,6 +8,30 @@ import { z } from "zod";
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Define types
+interface WeightLog {
+  weight: number;
+  date: string;
+}
+
+interface UserProfile {
+  height: number | null;
+  target_weight: number | null;
+}
+
+// Check if running in production
+const isProduction = process.env.NODE_ENV === 'production';
+
+// In production, dynamically import MySQL client
+let mysqlDb: any = null;
+if (isProduction) {
+  import('@/lib/mysql-db').then(module => {
+    mysqlDb = module.mysqlDb;
+  }).catch(err => {
+    console.error('Failed to load MySQL client:', err);
+  });
+}
+
 // Schema for profile data
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -27,40 +51,81 @@ export async function GET(req: NextRequest) {
     
     const userId = session.user.id;
     
-    // Get basic user data
-    const user = db.prepare(`
-      SELECT id, name, email, created_at 
-      FROM users 
-      WHERE id = ?
-    `).get(userId);
-    
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    // In production with MySQL
+    if (isProduction) {
+      if (!mysqlDb) {
+        // If MySQL module hasn't loaded yet, load it
+        const module = await import('@/lib/mysql-db');
+        mysqlDb = module.mysqlDb;
+      }
+      
+      // Get basic user data
+      const user = await mysqlDb.queryRow(
+        'SELECT id, name, email, created_at FROM users WHERE id = ?',
+        [userId]
+      );
+      
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      
+      // Get the latest weight log
+      const latestWeight = await mysqlDb.queryRow(
+        'SELECT weight, date FROM weight_logs WHERE user_id = ? ORDER BY date DESC LIMIT 1',
+        [userId]
+      );
+      
+      // Get the user's target weight (if exists)
+      const userProfile = await mysqlDb.queryRow(
+        'SELECT height, target_weight FROM user_profiles WHERE user_id = ?',
+        [userId]
+      );
+      
+      return NextResponse.json({
+        ...user,
+        currentWeight: latestWeight?.weight || null,
+        weightDate: latestWeight?.date || null,
+        targetWeight: userProfile?.target_weight || null,
+        height: userProfile?.height || null,
+      });
     }
-    
-    // Get the latest weight log
-    const latestWeight = db.prepare(`
-      SELECT weight, date
-      FROM weight_logs
-      WHERE user_id = ?
-      ORDER BY date DESC
-      LIMIT 1
-    `).get(userId);
-    
-    // Get the user's target weight (if exists)
-    const userProfile = db.prepare(`
-      SELECT height, target_weight
-      FROM user_profiles
-      WHERE user_id = ?
-    `).get(userId);
-    
-    return NextResponse.json({
-      ...user,
-      currentWeight: latestWeight?.weight || null,
-      weightDate: latestWeight?.date || null,
-      targetWeight: userProfile?.target_weight || null,
-      height: userProfile?.height || null,
-    });
+    // In development with SQLite
+    else {
+      // Get basic user data
+      const user = db.prepare(`
+        SELECT id, name, email, created_at 
+        FROM users 
+        WHERE id = ?
+      `).get(userId);
+      
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      
+      // Get the latest weight log
+      const latestWeight = db.prepare(`
+        SELECT weight, date
+        FROM weight_logs
+        WHERE user_id = ?
+        ORDER BY date DESC
+        LIMIT 1
+      `).get(userId) as WeightLog | undefined;
+      
+      // Get the user's target weight (if exists)
+      const userProfile = db.prepare(`
+        SELECT height, target_weight
+        FROM user_profiles
+        WHERE user_id = ?
+      `).get(userId) as UserProfile | undefined;
+      
+      return NextResponse.json({
+        ...user,
+        currentWeight: latestWeight?.weight || null,
+        weightDate: latestWeight?.date || null,
+        targetWeight: userProfile?.target_weight || null,
+        height: userProfile?.height || null,
+      });
+    }
   } catch (error) {
     console.error("Error fetching profile:", error);
     return NextResponse.json(
