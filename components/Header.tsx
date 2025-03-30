@@ -10,7 +10,8 @@ import {
   FaTimes, 
   FaCog, 
   FaQuestion,
-  FaInfoCircle
+  FaInfoCircle,
+  FaUserFriends
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { useSession, signOut } from 'next-auth/react';
@@ -69,6 +70,14 @@ const Header = () => {
             text="Statistics" 
             isActive={isActive('/statistics')}
           />
+          {isAuthenticated && (
+            <NavItem 
+              href="/partners" 
+              icon={<FaUserFriends />} 
+              text="Partners" 
+              isActive={isActive('/partners')}
+            />
+          )}
           <NavItem 
             href="/about" 
             icon={<FaInfoCircle />} 
@@ -180,6 +189,15 @@ const Header = () => {
               isActive={isActive('/statistics')}
               onClick={() => setIsMenuOpen(false)}
             />
+            {isAuthenticated && (
+              <MobileNavItem 
+                href="/partners" 
+                icon={<FaUserFriends />} 
+                text="Partners" 
+                isActive={isActive('/partners')}
+                onClick={() => setIsMenuOpen(false)}
+              />
+            )}
             <MobileNavItem 
               href="/about" 
               icon={<FaInfoCircle />} 

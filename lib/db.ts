@@ -57,6 +57,22 @@ if (!isProduction) {
       );
     `);
 
+    // Create user_relationships table
+    sqliteDb?.exec(`
+      CREATE TABLE IF NOT EXISTS user_relationships (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        related_user_id INTEGER NOT NULL,
+        relationship_type TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (related_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id, related_user_id)
+      );
+    `);
+
     // Create exercises table
     sqliteDb?.exec(`
       CREATE TABLE IF NOT EXISTS exercises (
