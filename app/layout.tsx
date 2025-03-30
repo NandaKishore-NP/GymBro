@@ -25,6 +25,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            // Initialize dark mode from localStorage
+            try {
+              if (localStorage.getItem('darkMode') === 'true') {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
+            } catch (e) {
+              // Handle case where localStorage is not available
+              console.log('Could not access localStorage for dark mode');
+            }
+          `
+        }} />
+      </head>
       <body className="min-h-screen flex flex-col">
         <Providers>
           {children}
