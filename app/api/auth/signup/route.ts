@@ -78,16 +78,13 @@ export async function POST(req: NextRequest) {
     // In development with SQLite
     else {
       try {
-        // We need to ensure db is not null before using it
+        // Check if db is available
         if (!db) {
           throw new Error("Database is not initialized in development mode");
         }
         
-        // Now TypeScript knows db is not null
-        const database = db;
-        
         // Check if user already exists
-        const existingUser = database.prepare("SELECT * FROM users WHERE email = ?").get(email);
+        const existingUser = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
         
         if (existingUser) {
           return NextResponse.json(
@@ -97,7 +94,7 @@ export async function POST(req: NextRequest) {
         }
         
         // Insert user into database
-        const insertStmt = database.prepare(
+        const insertStmt = db.prepare(
           "INSERT INTO users (name, email, password) VALUES (?, ?, ?)"
         );
         

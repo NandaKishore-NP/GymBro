@@ -5,14 +5,22 @@ async function seed() {
   try {
     console.log('Starting database seeding...');
 
+    // Make sure db is initialized
+    if (!db) {
+      console.error('Database is not initialized. Cannot seed data.');
+      return;
+    }
+
     // Hash a sample password
     const hashedPassword = await bcrypt.hash('password123', 10);
 
     // Check if test user already exists
+    // @ts-ignore
     const existingUser = db.prepare('SELECT * FROM users WHERE email = ?').get('test@example.com');
     
     if (!existingUser) {
       // Insert a sample user
+      // @ts-ignore
       const result = db.prepare(
         'INSERT INTO users (email, password, name) VALUES (?, ?, ?)'
       ).run('test@example.com', hashedPassword, 'Test User');
@@ -23,6 +31,7 @@ async function seed() {
       const userId = result.lastInsertRowid;
       
       // Insert a sample workout
+      // @ts-ignore
       const workoutResult = db.prepare(
         'INSERT INTO workouts (user_id, name, date, notes) VALUES (?, ?, ?, ?)'
       ).run(userId, 'Push Day', new Date().toISOString().split('T')[0], 'Focused on chest and triceps');
@@ -37,12 +46,14 @@ async function seed() {
       ];
       
       exercises.forEach(exercise => {
+        // @ts-ignore
         db.prepare(
           'INSERT INTO exercises (workout_id, name, sets, reps, weight) VALUES (?, ?, ?, ?, ?)'
         ).run(workoutId, exercise.name, exercise.sets, exercise.reps, exercise.weight);
       });
       
       // Insert a sample weight log
+      // @ts-ignore
       db.prepare(
         'INSERT INTO weight_logs (user_id, weight, date) VALUES (?, ?, ?)'
       ).run(userId, 180, new Date().toISOString().split('T')[0]);

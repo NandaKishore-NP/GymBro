@@ -59,7 +59,11 @@ export default function NewWorkoutPage() {
     if (field === 'weight' && (value === '' || value === null)) {
       newExercises[index][field] = null;
     } else {
-      newExercises[index][field] = field === 'name' ? value as string : Number(value);
+      if (field === 'name') {
+        newExercises[index][field] = value as string;
+      } else if (field === 'sets' || field === 'reps' || field === 'weight') {
+        newExercises[index][field] = Number(value);
+      }
     }
     
     setExercises(newExercises);

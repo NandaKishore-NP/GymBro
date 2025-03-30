@@ -1,15 +1,18 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { db } from "@/lib/db";
+import { db, DatabaseInstance } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { User } from "@/types";
+import { DatabaseUser } from "@/lib/types";
 
-// Validation schema
+// Validation schema for login
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
+
+// Check environment
+const isProduction = process.env.NODE_ENV === 'production';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -19,36 +22,82 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+        
         try {
-          // Validate input
-          const result = loginSchema.safeParse(credentials);
-          if (!result.success) {
-            return null;
-          }
-
-          const { email, password } = result.data;
-
-          // Find user in database
-          const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+          const email = credentials.email;
+          const password = credentials.password;
           
-          if (!user) {
-            return null;
+          // Handle different database environments
+          if (isProduction) {
+            // Production: PostgreSQL
+            try {
+              const { mysqlDb } = await import('@/lib/pg-db');
+              
+              // Query the PostgreSQL database
+              const dbUser = await mysqlDb.queryRow(
+                "SELECT * FROM users WHERE email = $1",
+                [email]
+              );
+              
+              if (!dbUser) return null;
+              
+              // Cast to our expected type
+              const user = dbUser as unknown as DatabaseUser;
+              
+              // Verify password
+              const isValid = await bcrypt.compare(password, user.password);
+              
+              if (!isValid) return null;
+              
+              // Return user without password
+              return {
+                id: user.id,
+                email: user.email,
+                name: user.name
+              };
+            } catch (error) {
+              console.error('PostgreSQL auth error:', error);
+              return null;
+            }
+          } else {
+            // Development: SQLite
+            if (!db) {
+              console.error('SQLite database not initialized');
+              return null;
+            }
+            
+            // Use the SQLite database
+            const sqlite = db as DatabaseInstance;
+            
+            try {
+              // Find the user
+              const stmt = sqlite.prepare("SELECT * FROM users WHERE email = ?");
+              const user = stmt.get(email) as DatabaseUser | undefined;
+              
+              if (!user) return null;
+              
+              // Verify password
+              const isValid = await bcrypt.compare(password, user.password);
+              
+              if (!isValid) return null;
+              
+              // Return user without password
+              return {
+                id: user.id,
+                email: user.email,
+                name: user.name
+              };
+            } catch (error) {
+              console.error('SQLite auth error:', error);
+              return null;
+            }
           }
-
-          // Verify password
-          const isPasswordValid = await bcrypt.compare(password, user.password);
-          
-          if (!isPasswordValid) {
-            return null;
-          }
-
-          // Return user object without the password
-          const { password: _, ...userWithoutPassword } = user;
-          
-          return userWithoutPassword as any;
         } catch (error) {
-          console.error("Auth error:", error);
+          console.error('Auth error:', error);
           return null;
         }
       },
@@ -56,26 +105,18 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // Initial sign in
       if (user) {
-        return {
-          ...token,
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        };
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
       }
-      
-      // Return previous token on subsequent calls
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user = {
-          id: token.id,
-          email: token.email as string,
-          name: token.name as string,
-        };
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
       }
       return session;
     },
@@ -89,12 +130,6 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  // Make sure we use the NEXTAUTH_SECRET from .env.local
   secret: process.env.NEXTAUTH_SECRET,
-  // Improve JWT behavior
-  jwt: {
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-  },
-  // Debug mode in development
   debug: process.env.NODE_ENV === "development",
 }; 

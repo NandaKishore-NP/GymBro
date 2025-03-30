@@ -3,6 +3,9 @@ import { Database } from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
+// Declare development database is type safe
+export type DatabaseInstance = Database;
+
 // Check if running in production
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -90,7 +93,7 @@ if (!isProduction) {
 // This is the database interface we export
 // In development, it's just SQLite
 // In production, we'll use PostgreSQL via the API routes
-export const db = isProduction ? null : sqliteDb as Database;
+export const db = isProduction ? null : sqliteDb;
 
 // For the production database, we use pg-db.ts instead of mysql-db.ts
 // In your API routes, replace:
