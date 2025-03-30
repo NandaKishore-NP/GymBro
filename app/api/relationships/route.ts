@@ -35,31 +35,77 @@ export async function GET(req: NextRequest) {
         // Import PostgreSQL client
         const { mysqlDb } = await import('@/lib/pg-db');
         
-        // Get relationships for the user
-        const sentRelationships = await mysqlDb.query(`
-          SELECT r.id, r.relationship_type, r.status, r.created_at, r.updated_at, 
-                 u.id as related_user_id, u.name as related_user_name, u.email as related_user_email
-          FROM user_relationships r
-          JOIN users u ON r.related_user_id = u.id
-          WHERE r.user_id = $1
-        `, [userId]);
-        
-        const receivedRelationships = await mysqlDb.query(`
-          SELECT r.id, r.relationship_type, r.status, r.created_at, r.updated_at, 
-                 u.id as related_user_id, u.name as related_user_name, u.email as related_user_email
-          FROM user_relationships r
-          JOIN users u ON r.user_id = u.id
-          WHERE r.related_user_id = $1
-        `, [userId]);
-        
-        return NextResponse.json({
-          sent: sentRelationships,
-          received: receivedRelationships
-        });
+        try {
+          // Start a transaction
+          await mysqlDb.query('BEGIN');
+          
+          // Check if the user_relationships table exists, create it if not
+          await mysqlDb.query(`
+            CREATE TABLE IF NOT EXISTS user_relationships (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              related_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              relationship_type VARCHAR(50) NOT NULL,
+              status VARCHAR(50) NOT NULL DEFAULT 'pending',
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(user_id, related_user_id)
+            )
+          `);
+          
+          // Check if table exists
+          const tableCheck = await mysqlDb.query(`
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables 
+              WHERE table_name = 'user_relationships'
+            ) as exists
+          `);
+          
+          let sentRelationships = [];
+          let receivedRelationships = [];
+          
+          // Only try to fetch relationships if the table exists
+          if (tableCheck[0]?.exists) {
+            // Get relationships for the user
+            sentRelationships = await mysqlDb.query(`
+              SELECT r.id, r.relationship_type, r.status, r.created_at, r.updated_at, 
+                     u.id as related_user_id, u.name as related_user_name, u.email as related_user_email
+              FROM user_relationships r
+              JOIN users u ON r.related_user_id = u.id
+              WHERE r.user_id = $1
+            `, [userId]);
+            
+            receivedRelationships = await mysqlDb.query(`
+              SELECT r.id, r.relationship_type, r.status, r.created_at, r.updated_at, 
+                     u.id as related_user_id, u.name as related_user_name, u.email as related_user_email
+              FROM user_relationships r
+              JOIN users u ON r.user_id = u.id
+              WHERE r.related_user_id = $1
+            `, [userId]);
+          }
+          
+          // Commit the transaction
+          await mysqlDb.query('COMMIT');
+          
+          return NextResponse.json({
+            sent: sentRelationships,
+            received: receivedRelationships
+          });
+        } catch (error) {
+          // Rollback on error
+          await mysqlDb.query('ROLLBACK');
+          console.error("Transaction error:", error);
+          throw error;
+        }
       } catch (error) {
         console.error("PostgreSQL error fetching relationships:", error);
+        let errorMsg = "An error occurred while fetching relationships in production";
+        if (error instanceof Error) {
+          errorMsg += `: ${error.message}`;
+          console.error("Error stack:", error.stack);
+        }
         return NextResponse.json(
-          { error: "An error occurred while fetching relationships in production" },
+          { error: errorMsg },
           { status: 500 }
         );
       }
