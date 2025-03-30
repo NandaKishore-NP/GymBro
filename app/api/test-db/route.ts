@@ -12,14 +12,14 @@ export async function GET() {
     // In production with MySQL
     if (isProduction) {
       try {
-        // Import MySQL client
-        const { mysqlDb } = await import('@/lib/mysql-db');
+        // Import PostgreSQL client
+        const { mysqlDb } = await import('@/lib/pg-db');
         
-        // Test database connection - in MySQL we can query information_schema
+        // Test database connection - in PostgreSQL we can query information_schema
         const tables = await mysqlDb.query(`
           SELECT table_name as name
           FROM information_schema.tables
-          WHERE table_schema = DATABASE()
+          WHERE table_schema = 'public'
           ORDER BY table_name
         `);
         
@@ -35,17 +35,17 @@ export async function GET() {
         
         return NextResponse.json({
           status: 'ok',
-          database: 'MySQL',
+          database: 'PostgreSQL (CockroachDB)',
           message: 'Database is accessible',
           tables: tables.map((t: any) => t.name),
           hasWorkoutsTable,
           workoutCount
         });
       } catch (error: any) {
-        console.error('MySQL database test error:', error);
+        console.error('PostgreSQL database test error:', error);
         return NextResponse.json({
           status: 'error',
-          database: 'MySQL',
+          database: 'PostgreSQL',
           message: 'Database error in production',
           error: error.message
         }, { status: 500 });

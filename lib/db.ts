@@ -95,7 +95,9 @@ if (!isProduction) {
 // In production, we'll use PostgreSQL via the API routes
 export const db = isProduction ? null : sqliteDb;
 
-// For the production database, we use pg-db.ts instead of mysql-db.ts
+// For the production database, we use pg-db.ts
+// In your API routes, use:
+// const { mysqlDb } = await import('@/lib/pg-db');
 // In your API routes, replace:
 // const { mysqlDb } = await import('@/lib/mysql-db');
 // with:

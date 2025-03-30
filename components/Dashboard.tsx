@@ -78,7 +78,13 @@ const Dashboard = () => {
         
         console.log('Making fetch request to /api/workouts');
         
-        const response = await fetch('/api/workouts', {
+        // Create a timeout promise
+        const timeoutPromise = new Promise<Response>((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out after 15 seconds')), 15000);
+        });
+        
+        // Start the fetch
+        const fetchPromise = fetch('/api/workouts', {
           cache: 'no-store',
           headers: {
             'Content-Type': 'application/json',
@@ -86,15 +92,36 @@ const Dashboard = () => {
           }
         });
         
+        // Race the fetch against a timeout
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        
         console.log('Fetch response status:', response.status);
         
         if (!response.ok) {
-          const errorData = await response.text();
-          console.error('Response error:', response.status, errorData);
-          throw new Error(`Failed to fetch workouts: ${response.status} ${errorData}`);
+          // Try to get the error message as text
+          const errorText = await response.text();
+          console.error('Response error:', response.status, errorText);
+          
+          // Try to parse as JSON if possible, otherwise use as text
+          try {
+            const errorData = JSON.parse(errorText);
+            throw new Error(errorData.error || `Failed to fetch workouts: ${response.status}`);
+          } catch (parseError) {
+            // If we can't parse as JSON, use the text
+            throw new Error(`Failed to fetch workouts: ${response.status} ${errorText.substring(0, 100)}`);
+          }
         }
         
-        const data = await response.json();
+        let data;
+        try {
+          // Safely parse the JSON response
+          const responseText = await response.text();
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Error parsing workouts JSON:', parseError);
+          throw new Error('Failed to parse workout data from server');
+        }
+        
         console.log(`Retrieved ${data.length} workouts`);
         
         setWorkouts(data);
@@ -139,13 +166,34 @@ const Dashboard = () => {
       try {
         setLoading(prev => ({ ...prev, profile: true }));
         
-        const response = await fetch('/api/profile', {
-          // Add cache: 'no-store' to avoid caching the profile data
+        // Create a timeout promise
+        const timeoutPromise = new Promise<Response>((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000);
+        });
+        
+        // Start the fetch with no-store cache policy
+        const fetchPromise = fetch('/api/profile', {
           cache: 'no-store'
         });
-        if (!response.ok) throw new Error('Failed to fetch profile');
         
-        const data = await response.json();
+        // Race the fetch against a timeout
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Profile response error:', response.status, errorText);
+          throw new Error('Failed to fetch profile data');
+        }
+        
+        // Safely parse the JSON response
+        let data;
+        try {
+          const responseText = await response.text();
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Error parsing profile JSON:', parseError);
+          throw new Error('Failed to parse profile data from server');
+        }
         
         // Update current weight in stats
         if (data.currentWeight) {
@@ -154,7 +202,7 @@ const Dashboard = () => {
             currentWeight: data.currentWeight
           }));
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching profile:', err);
       } finally {
         setLoading(prev => ({ ...prev, profile: false }));
@@ -172,13 +220,34 @@ const Dashboard = () => {
       try {
         setLoading(prev => ({ ...prev, progress: true }));
         
-        // Fetch actual weight logs from API with no-store cache policy
-        const response = await fetch('/api/weight-logs', {
+        // Create a timeout promise
+        const timeoutPromise = new Promise<Response>((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out after 10 seconds')), 10000);
+        });
+        
+        // Start the fetch with no-store cache policy
+        const fetchPromise = fetch('/api/weight-logs', {
           cache: 'no-store'
         });
-        if (!response.ok) throw new Error('Failed to fetch weight logs');
         
-        const weightData = await response.json();
+        // Race the fetch against a timeout
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Weight logs response error:', response.status, errorText);
+          throw new Error('Failed to fetch weight logs');
+        }
+        
+        // Safely parse the JSON response
+        let weightData;
+        try {
+          const responseText = await response.text();
+          weightData = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Error parsing weight logs JSON:', parseError);
+          throw new Error('Failed to parse weight logs data from server');
+        }
         
         if (weightData && weightData.length > 0) {
           setWeightLogs(weightData);
@@ -205,7 +274,7 @@ const Dashboard = () => {
           // No weight logs, empty chart
           setChartData(null);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching weight logs:', err);
       } finally {
         setLoading(prev => ({ ...prev, progress: false }));

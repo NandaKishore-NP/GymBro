@@ -153,177 +153,202 @@ export async function GET(req: NextRequest) {
 
 // Update user profile
 export async function PUT(req: NextRequest) {
+  // Set a timeout to prevent hanging requests
+  const requestTimeout = 15000; // 15 seconds
+  let timeoutId: NodeJS.Timeout | null = null;
+  
+  // Create a timeout promise
+  const timeoutPromise = new Promise<NextResponse>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error('Request timed out after 15 seconds'));
+    }, requestTimeout);
+  });
+  
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    
-    const userId = session.user.id;
-    const body = await req.json();
-    
-    // Validate request body
-    const validationResult = profileSchema.safeParse(body);
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: "Invalid data", details: validationResult.error.format() },
-        { status: 400 }
-      );
-    }
-    
-    const { name, currentWeight, targetWeight, height } = validationResult.data;
-    
-    // In production with MySQL
-    if (isProduction) {
-      try {
-        // Import MySQL client
-        const { mysqlDb } = await import('@/lib/mysql-db');
-        
-        // Start a transaction (MySQL)
-        await mysqlDb.query('START TRANSACTION');
-        
+    // Wrap the entire request handling in a Promise
+    const responsePromise = async () => {
+      const session = await getServerSession(authOptions);
+      
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      
+      const userId = session.user.id;
+      const body = await req.json();
+      
+      // Validate request body
+      const validationResult = profileSchema.safeParse(body);
+      if (!validationResult.success) {
+        return NextResponse.json(
+          { error: "Invalid data", details: validationResult.error.format() },
+          { status: 400 }
+        );
+      }
+      
+      const { name, currentWeight, targetWeight, height } = validationResult.data;
+      
+      // In production environment
+      if (isProduction) {
         try {
-          // Update user name
-          await mysqlDb.update(
-            'UPDATE users SET name = ?, updated_at = NOW() WHERE id = ?',
-            [name, userId]
-          );
+          // Import PostgreSQL client
+          const { mysqlDb } = await import('@/lib/pg-db');
           
-          // Check if user profile exists
-          const profileExists = await mysqlDb.queryRow(
-            'SELECT id FROM user_profiles WHERE user_id = ?',
-            [userId]
-          );
+          // Start a transaction (PostgreSQL)
+          await mysqlDb.query('START TRANSACTION');
           
-          // Update or insert profile
-          if (profileExists) {
+          try {
+            // Update user name
             await mysqlDb.update(
-              'UPDATE user_profiles SET height = ?, target_weight = ?, updated_at = NOW() WHERE user_id = ?',
-              [height, targetWeight, userId]
+              'UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2',
+              [name, userId]
             );
-          } else {
+            
+            // Check if user profile exists
+            const profileExists = await mysqlDb.queryRow(
+              'SELECT id FROM user_profiles WHERE user_id = $1',
+              [userId]
+            );
+            
+            // Update or insert profile
+            if (profileExists) {
+              await mysqlDb.update(
+                'UPDATE user_profiles SET height = $1, target_weight = $2, updated_at = NOW() WHERE user_id = $3',
+                [height, targetWeight, userId]
+              );
+            } else {
+              await mysqlDb.insert(
+                'INSERT INTO user_profiles (user_id, height, target_weight) VALUES ($1, $2, $3)',
+                [userId, height, targetWeight]
+              );
+            }
+            
+            // Add weight log
             await mysqlDb.insert(
-              'INSERT INTO user_profiles (user_id, height, target_weight) VALUES (?, ?, ?)',
-              [userId, height, targetWeight]
+              'INSERT INTO weight_logs (user_id, weight, date) VALUES ($1, $2, CURRENT_DATE)',
+              [userId, currentWeight]
             );
+            
+            // Commit transaction
+            await mysqlDb.query('COMMIT');
+            
+            return NextResponse.json({ 
+              message: "Profile updated successfully",
+              updatedProfile: {
+                name,
+                currentWeight,
+                targetWeight,
+                height,
+              }
+            });
+          } catch (error) {
+            // Rollback transaction on error
+            await mysqlDb.query('ROLLBACK');
+            throw error;
           }
-          
-          // Add weight log
-          await mysqlDb.insert(
-            'INSERT INTO weight_logs (user_id, weight, date) VALUES (?, ?, CURDATE())',
-            [userId, currentWeight]
+        } catch (error) {
+          console.error("PostgreSQL profile update error:", error);
+          return NextResponse.json(
+            { error: "An error occurred while updating the profile in production" },
+            { status: 500 }
           );
-          
-          // Commit transaction
-          await mysqlDb.query('COMMIT');
-          
-          return NextResponse.json({ 
-            message: "Profile updated successfully",
-            updatedProfile: {
-              name,
-              currentWeight,
-              targetWeight,
-              height,
-            }
-          });
-        } catch (error) {
-          // Rollback transaction on error
-          await mysqlDb.query('ROLLBACK');
-          throw error;
         }
-      } catch (error) {
-        console.error("MySQL profile update error:", error);
-        return NextResponse.json(
-          { error: "An error occurred while updating the profile in production" },
-          { status: 500 }
-        );
       }
-    }
-    // In development with SQLite
-    else {
-      try {
-        // We're using a type assertion here because our db.ts file ensures
-        // that in development mode, DB will not be null.
-        const database = db as Database;
-        
-        // Start a transaction
-        database.prepare("BEGIN TRANSACTION").run();
-        
+      // In development with SQLite
+      else {
         try {
-          // Update user name
-          database.prepare(`
-            UPDATE users 
-            SET name = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-          `).run(name, userId);
+          // We're using a type assertion here because our db.ts file ensures
+          // that in development mode, DB will not be null.
+          const database = db as Database;
           
-          // Check if user_profiles table exists, if not create it
-          database.exec(`
-            CREATE TABLE IF NOT EXISTS user_profiles (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              user_id INTEGER NOT NULL UNIQUE,
-              height REAL,
-              target_weight REAL,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            );
-          `);
+          // Start a transaction
+          database.prepare("BEGIN TRANSACTION").run();
           
-          // Upsert user profile (insert or update)
-          const profileExists = database.prepare(`
-            SELECT id FROM user_profiles WHERE user_id = ?
-          `).get(userId);
-          
-          if (profileExists) {
+          try {
+            // Update user name
             database.prepare(`
-              UPDATE user_profiles
-              SET height = ?, target_weight = ?, updated_at = CURRENT_TIMESTAMP
-              WHERE user_id = ?
-            `).run(height, targetWeight, userId);
-          } else {
-            database.prepare(`
-              INSERT INTO user_profiles (user_id, height, target_weight)
-              VALUES (?, ?, ?)
-            `).run(userId, height, targetWeight);
-          }
-          
-          // Add a new weight log entry
-          database.prepare(`
-            INSERT INTO weight_logs (user_id, weight, date)
-            VALUES (?, ?, date('now'))
-          `).run(userId, currentWeight);
-          
-          // Commit the transaction
-          database.prepare("COMMIT").run();
-          
-          return NextResponse.json({ 
-            message: "Profile updated successfully",
-            updatedProfile: {
-              name,
-              currentWeight,
-              targetWeight,
-              height,
+              UPDATE users 
+              SET name = ?, updated_at = CURRENT_TIMESTAMP
+              WHERE id = ?
+            `).run(name, userId);
+            
+            // Check if user_profiles table exists, if not create it
+            database.exec(`
+              CREATE TABLE IF NOT EXISTS user_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL UNIQUE,
+                height REAL,
+                target_weight REAL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+              );
+            `);
+            
+            // Upsert user profile (insert or update)
+            const profileExists = database.prepare(`
+              SELECT id FROM user_profiles WHERE user_id = ?
+            `).get(userId);
+            
+            if (profileExists) {
+              database.prepare(`
+                UPDATE user_profiles
+                SET height = ?, target_weight = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+              `).run(height, targetWeight, userId);
+            } else {
+              database.prepare(`
+                INSERT INTO user_profiles (user_id, height, target_weight)
+                VALUES (?, ?, ?)
+              `).run(userId, height, targetWeight);
             }
-          });
+            
+            // Add a new weight log entry
+            database.prepare(`
+              INSERT INTO weight_logs (user_id, weight, date)
+              VALUES (?, ?, date('now'))
+            `).run(userId, currentWeight);
+            
+            // Commit the transaction
+            database.prepare("COMMIT").run();
+            
+            return NextResponse.json({ 
+              message: "Profile updated successfully",
+              updatedProfile: {
+                name,
+                currentWeight,
+                targetWeight,
+                height,
+              }
+            });
+          } catch (error) {
+            // Rollback the transaction on error
+            database.prepare("ROLLBACK").run();
+            throw error;
+          }
         } catch (error) {
-          // Rollback the transaction on error
-          database.prepare("ROLLBACK").run();
-          throw error;
+          console.error("SQLite profile update error:", error);
+          return NextResponse.json(
+            { error: "An error occurred while updating the profile in development" },
+            { status: 500 }
+          );
         }
-      } catch (error) {
-        console.error("SQLite profile update error:", error);
-        return NextResponse.json(
-          { error: "An error occurred while updating the profile in development" },
-          { status: 500 }
-        );
       }
-    }
-  } catch (error) {
+    };
+
+    // Wait for the response or timeout
+    const response = await Promise.race([responsePromise(), timeoutPromise]);
+    
+    // Clear timeout if the request completes
+    if (timeoutId) clearTimeout(timeoutId);
+    
+    return response;
+  } catch (error: any) {
+    // Clear timeout if there's an error
+    if (timeoutId) clearTimeout(timeoutId);
+    
     console.error("Error updating profile:", error);
     return NextResponse.json(
-      { error: "An error occurred while updating the profile" },
+      { error: `An error occurred while updating the profile: ${error.message || 'Unknown error'}` },
       { status: 500 }
     );
   }
@@ -332,4 +357,4 @@ export async function PUT(req: NextRequest) {
 // Note: For a complete implementation, you would need to:
 // 1. Update the PUT method to use the same pattern as GET
 // 2. Apply similar changes to all other API routes
-// 3. Create a fully-functional MySQL implementation for production 
+// 3. Create a fully-functional PostgreSQL implementation for production 
