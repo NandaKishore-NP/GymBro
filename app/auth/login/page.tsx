@@ -28,14 +28,32 @@ export default function LoginPage() {
       setIsLoading(true);
       setError('');
       
-      const result = await signIn('credentials', {
+      // Add a timeout to prevent hanging indefinitely
+      const loginPromise = signIn('credentials', {
         redirect: false,
         email,
         password,
       });
       
-      if (result?.error) {
-        setError('Invalid email or password');
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Login request timed out. Please try again.')), 15000);
+      });
+      
+      // Race the login against the timeout
+      const result = await Promise.race([loginPromise, timeoutPromise]) as any;
+      
+      if (!result) {
+        throw new Error('No response from server. Please try again.');
+      }
+      
+      if (result.error) {
+        console.error('Login error details:', result.error);
+        if (result.error.includes('JSON')) {
+          setError('Server error: Invalid response format. Please try again later.');
+        } else {
+          setError('Invalid email or password');
+        }
         setIsLoading(false);
         return;
       }
@@ -43,9 +61,18 @@ export default function LoginPage() {
       // Redirect to callbackUrl or dashboard on success
       router.push(callbackUrl);
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      setError('Something went wrong. Please try again.');
+      
+      // Provide more specific error messages
+      if (error.message?.includes('timed out')) {
+        setError('Login request timed out. Please try again later.');
+      } else if (error.message?.includes('JSON') || error.name === 'SyntaxError') {
+        setError('Server error: Invalid response from server. Please try again later.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
+      
       setIsLoading(false);
     }
   };

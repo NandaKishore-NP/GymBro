@@ -24,7 +24,15 @@ async function getPool() {
     try {
       // Extract connection parts from DATABASE_URL without sslmode
       // Use a more direct approach that avoids passing invalid SSL options
-      pool = mysql.createPool(DATABASE_URL);
+      pool = mysql.createPool({
+        uri: DATABASE_URL,
+        // Fix connection timeout issues that could cause 504 errors
+        connectTimeout: 10000, // 10 seconds connection timeout 
+        connectionLimit: 5,    // Reduce connection limit
+        waitForConnections: true,
+        // Add query timeout
+        queryTimeout: 5000,    // 5 seconds query timeout
+      });
       
       console.log('MySQL pool created successfully');
     } catch (error) {
