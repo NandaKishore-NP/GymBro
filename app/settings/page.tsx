@@ -74,6 +74,14 @@ export default function SettingsPage() {
     };
     
     loadSettings();
+    
+    // Check for dark mode on initial render regardless of auth status
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    if (savedDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, [session, status]);
   
   const handleSaveSettings = async () => {
@@ -122,7 +130,18 @@ export default function SettingsPage() {
   };
   
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+    const newDarkModeState = !darkMode;
+    setDarkMode(newDarkModeState);
+    
+    // Apply dark mode immediately
+    if (newDarkModeState) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
+    // Save to localStorage immediately
+    localStorage.setItem('darkMode', newDarkModeState.toString());
   };
   
   if (status === 'unauthenticated') {

@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
+import { useRouter } from 'next/navigation';
 
 // Validation schema for profile data
 const profileSchema = z.object({
@@ -17,6 +18,7 @@ const profileSchema = z.object({
 });
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(session?.user?.name || '');
@@ -126,6 +128,9 @@ export default function ProfilePage() {
       // Show success message
       setIsEditing(false);
       setSaveSuccess(true);
+      
+      // Refresh the page data to update UI
+      router.refresh();
       
       // Hide success message after 3 seconds
       setTimeout(() => {

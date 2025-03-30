@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { User } from "@/types";
 
 // Validation schema
 const loginSchema = z.object({
@@ -18,7 +19,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         try {
           // Validate input
           const result = loginSchema.safeParse(credentials);
@@ -45,7 +46,7 @@ export const authOptions: NextAuthOptions = {
           // Return user object without the password
           const { password: _, ...userWithoutPassword } = user;
           
-          return userWithoutPassword;
+          return userWithoutPassword as any;
         } catch (error) {
           console.error("Auth error:", error);
           return null;
@@ -55,19 +56,25 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // Initial sign in
       if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
+        return {
+          ...token,
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        };
       }
+      
+      // Return previous token on subsequent calls
       return token;
     },
     async session({ session, token }) {
       if (token) {
         session.user = {
           id: token.id,
-          email: token.email,
-          name: token.name,
+          email: token.email as string,
+          name: token.name as string,
         };
       }
       return session;
@@ -82,5 +89,12 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET || "your-super-secret-key-change-in-production",
+  // Make sure we use the NEXTAUTH_SECRET from .env.local
+  secret: process.env.NEXTAUTH_SECRET,
+  // Improve JWT behavior
+  jwt: {
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+  },
+  // Debug mode in development
+  debug: process.env.NODE_ENV === "development",
 }; 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaDumbbell, FaEdit, FaTrash, FaArrowLeft, FaSpinner } from 'react-icons/fa';
+import { FaDumbbell, FaEdit, FaTrash, FaArrowLeft, FaSpinner, FaCalendarAlt, FaHeartbeat } from 'react-icons/fa';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -19,6 +19,7 @@ interface Workout {
   name: string;
   date: string;
   notes: string | null;
+  heart_rate: number | null;
   exercises: Exercise[];
 }
 
@@ -144,10 +145,16 @@ export default function WorkoutDetailsPage({ params }: { params: { id: string } 
                   <FaCalendarAlt className="mr-2" />
                   <span>{formatDate(workout.date)}</span>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center mr-6 mb-2 md:mb-0">
                   <FaDumbbell className="mr-2" />
                   <span>{workout.exercises.length} Exercises</span>
                 </div>
+                {workout.heart_rate && (
+                  <div className="flex items-center">
+                    <FaHeartbeat className="mr-2 text-red-500" />
+                    <span>{workout.heart_rate} BPM</span>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -238,8 +245,4 @@ export default function WorkoutDetailsPage({ params }: { params: { id: string } 
       <Footer />
     </>
   );
-}
-
-const FaCalendarAlt = () => {
-  return <span className="text-current">📅</span>;
-}; 
+} 

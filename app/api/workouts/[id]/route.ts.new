@@ -18,17 +18,12 @@ export async function GET(
     const userId = session.user.id;
     const workoutId = params.id;
     
-    // Get the workout
+    // Get the workout - without heart_rate
     const workout = db.prepare(`
       SELECT id, name, date, notes
       FROM workouts
       WHERE id = ? AND user_id = ?
-    `).get(workoutId, userId) as {
-      id: number;
-      name: string;
-      date: string;
-      notes: string | null;
-    };
+    `).get(workoutId, userId);
     
     if (!workout) {
       return NextResponse.json({ error: "Workout not found" }, { status: 404 });
@@ -42,13 +37,14 @@ export async function GET(
       ORDER BY id ASC
     `).all(workoutId);
     
-    return NextResponse.json({
-      id: workout.id,
-      name: workout.name,
-      date: workout.date,
-      notes: workout.notes,
+    // Add dummy heart_rate for compatibility
+    const workoutWithHeartRate = {
+      ...workout,
+      heart_rate: null,
       exercises
-    });
+    };
+    
+    return NextResponse.json(workoutWithHeartRate);
   } catch (error) {
     console.error("Error fetching workout:", error);
     return NextResponse.json(
@@ -87,7 +83,7 @@ export async function PUT(
     db.prepare("BEGIN TRANSACTION").run();
     
     try {
-      // Update workout
+      // Update workout - without heart_rate
       if (body.name || body.date || body.notes !== undefined) {
         const updates = [];
         const params = [];
@@ -122,8 +118,8 @@ export async function PUT(
       if (body.exercises && Array.isArray(body.exercises)) {
         // Delete existing exercises that are not in the new list
         const exerciseIds = body.exercises
-          .filter((ex: {id?: number}) => ex.id)
-          .map((ex: {id?: number}) => ex.id);
+          .filter((ex: { id?: number }) => ex.id)
+          .map((ex: { id?: number }) => ex.id);
         
         if (exerciseIds.length > 0) {
           db.prepare(`
@@ -180,13 +176,13 @@ export async function PUT(
       // Commit the transaction
       db.prepare("COMMIT").run();
       
-      // Get the updated workout with exercises
+      // Get the updated workout with exercises - without heart_rate
       const updatedWorkout = db.prepare(`
         SELECT id, name, date, notes
         FROM workouts
         WHERE id = ?
       `).get(workoutId) as {
-        id: number; 
+        id: number;
         name: string;
         date: string;
         notes: string | null;
@@ -206,6 +202,7 @@ export async function PUT(
           name: updatedWorkout.name,
           date: updatedWorkout.date,
           notes: updatedWorkout.notes,
+          heart_rate: null, // Add dummy heart_rate for compatibility
           exercises: updatedExercises
         }
       });

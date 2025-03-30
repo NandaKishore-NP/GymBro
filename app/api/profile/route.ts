@@ -4,6 +4,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/auth-options";
 import { z } from "zod";
 
+// Add response options to control caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // Schema for profile data
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),

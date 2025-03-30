@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Providers } from '@/lib/auth/providers';
 
@@ -7,6 +7,17 @@ export const metadata: Metadata = {
   description: 'A modern fitness tracking app to monitor your gym progress, get workout suggestions, and reach your fitness goals.',
 }
 
+// Add viewport configuration for better mobile responsiveness
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+}
+
+// Force dynamic rendering to ensure proper auth handling
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({
   children,
 }: {
@@ -14,7 +25,24 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen">
+      <head>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            // Initialize dark mode from localStorage
+            try {
+              if (localStorage.getItem('darkMode') === 'true') {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
+            } catch (e) {
+              // Handle case where localStorage is not available
+              console.log('Could not access localStorage for dark mode');
+            }
+          `
+        }} />
+      </head>
+      <body className="min-h-screen flex flex-col">
         <Providers>
           {children}
         </Providers>
