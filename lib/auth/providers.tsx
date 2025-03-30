@@ -10,8 +10,8 @@ type ProvidersProps = {
 export function Providers({ children }: ProvidersProps) {
   return (
     <SessionProvider 
-      // Refresh session every 5 minutes (300 seconds)
-      refetchInterval={300} 
+      // Refresh session every 1 minute to ensure it remains valid
+      refetchInterval={60} 
       refetchOnWindowFocus={true}
     >
       {children}
