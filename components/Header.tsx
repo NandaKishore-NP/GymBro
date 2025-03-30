@@ -288,8 +288,9 @@ export default function Header() {
           ) : (
             <Link 
               href="/auth/login"
-              className="btn btn-primary"
+              className="btn-primary"
             >
+              <FaUser className="mr-2" />
               Log In
             </Link>
           )}
@@ -345,17 +346,11 @@ export default function Header() {
             
             <Link 
               href="/workouts/new" 
-              className={`px-3 py-2 rounded-md text-sm font-medium ml-8 ${
-                pathname === '/workouts/new' 
-                  ? 'bg-gray-100 dark:bg-gray-800 text-primary' 
-                  : 'text-gray-700 dark:text-gray-300'
-              }`}
+              className="new-workout-btn ml-8"
               onClick={() => setIsMenuOpen(false)}
             >
-              <div className="flex items-center">
-                <FaPlus className="mr-2" />
-                <span>New Workout</span>
-              </div>
+              <FaPlus className="animate-pulse" />
+              <span>New Workout</span>
             </Link>
             
             <Link 
@@ -483,9 +478,10 @@ export default function Header() {
             ) : (
               <Link 
                 href="/auth/login"
-                className="mt-2 px-3 py-2 rounded-md bg-primary text-white font-medium text-sm hover:bg-primary-dark"
+                className="btn-primary mt-2"
                 onClick={() => setIsMenuOpen(false)}
               >
+                <FaUser className="mr-2" />
                 Log In
               </Link>
             )}

@@ -181,9 +181,9 @@ export default function WorkoutsPage() {
           
           <Link
             href="/workouts/new"
-            className="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center"
+            className="new-workout-btn"
           >
-            <FaPlus className="mr-2" />
+            <FaPlus className="animate-pulse" />
             New Workout
           </Link>
         </div>
@@ -250,9 +250,9 @@ export default function WorkoutsPage() {
                 {(!searchQuery && selectedCategory === 'All Workouts') && (
                   <Link
                     href="/workouts/new"
-                    className="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-lg inline-flex items-center"
+                    className="new-workout-btn"
                   >
-                    <FaPlus className="mr-2" />
+                    <FaPlus className="animate-pulse" />
                     New Workout
                   </Link>
                 )}
