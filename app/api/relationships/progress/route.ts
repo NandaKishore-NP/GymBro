@@ -11,6 +11,27 @@ export const revalidate = 0;
 // Check if running in production
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Define types for our data structures
+interface WeightLog {
+  weight: number;
+  date: string;
+}
+
+interface Workout {
+  id: number;
+  name: string;
+  date: string;
+  notes: string | null;
+  heart_rate: number | null;
+}
+
+interface ExerciseSummary {
+  name: string;
+  workout_count: number;
+  max_weight: number;
+  avg_weight: number;
+}
+
 // Get a specific partner/friend's progress
 export async function GET(req: NextRequest) {
   try {
@@ -83,10 +104,10 @@ export async function GET(req: NextRequest) {
         // Get exercise summary
         const exerciseSummary = await mysqlDb.query(`
           SELECT e.name, COUNT(*) as workout_count, 
-                 MAX(weight) as max_weight, AVG(weight) as avg_weight
+                 MAX(e.weight) as max_weight, AVG(e.weight) as avg_weight
           FROM exercises e
           JOIN workouts w ON e.workout_id = w.id
-          WHERE w.user_id = $1
+          WHERE w.user_id = $1 AND e.weight IS NOT NULL
           GROUP BY e.name
           ORDER BY workout_count DESC
           LIMIT 5
@@ -136,35 +157,61 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({ error: "Partner not found" }, { status: 404 });
         }
         
-        // Get partner's weight logs
-        const weightLogs = database.prepare(`
-          SELECT weight, date
-          FROM weight_logs
-          WHERE user_id = ?
-          ORDER BY date DESC
-          LIMIT 10
-        `).all(partnerId);
+        // Get partner's weight logs - with error handling
+        let weightLogs: WeightLog[] = [];
+        try {
+          weightLogs = database.prepare(`
+            SELECT weight, date
+            FROM weight_logs
+            WHERE user_id = ?
+            ORDER BY date DESC
+            LIMIT 10
+          `).all(partnerId) as WeightLog[];
+        } catch (error) {
+          console.error("Error fetching weight logs:", error);
+          // Continue with empty weight logs
+        }
         
-        // Get partner's recent workouts
-        const recentWorkouts = database.prepare(`
-          SELECT id, name, date, notes, heart_rate
-          FROM workouts
-          WHERE user_id = ?
-          ORDER BY date DESC
-          LIMIT 5
-        `).all(partnerId);
+        // Get partner's recent workouts - with error handling
+        let recentWorkouts: Workout[] = [];
+        try {
+          recentWorkouts = database.prepare(`
+            SELECT id, name, date, notes, heart_rate
+            FROM workouts
+            WHERE user_id = ?
+            ORDER BY date DESC
+            LIMIT 5
+          `).all(partnerId) as Workout[];
+        } catch (error) {
+          console.error("Error fetching recent workouts:", error);
+          // Continue with empty workouts
+        }
         
-        // Get exercise summary
-        const exerciseSummary = database.prepare(`
-          SELECT e.name, COUNT(*) as workout_count, 
-                 MAX(weight) as max_weight, AVG(weight) as avg_weight
-          FROM exercises e
-          JOIN workouts w ON e.workout_id = w.id
-          WHERE w.user_id = ?
-          GROUP BY e.name
-          ORDER BY workout_count DESC
-          LIMIT 5
-        `).all(partnerId);
+        // Get exercise summary - with error handling
+        let exerciseSummary: ExerciseSummary[] = [];
+        try {
+          // First check if exercises table has the right structure
+          const tableCheck = database.prepare(`
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='exercises'
+          `).get() as { name: string } | undefined;
+          
+          if (tableCheck) {
+            exerciseSummary = database.prepare(`
+              SELECT e.name, COUNT(*) as workout_count, 
+                     MAX(e.weight) as max_weight, AVG(e.weight) as avg_weight
+              FROM exercises e
+              JOIN workouts w ON e.workout_id = w.id
+              WHERE w.user_id = ? AND e.weight IS NOT NULL
+              GROUP BY e.name
+              ORDER BY workout_count DESC
+              LIMIT 5
+            `).all(partnerId) as ExerciseSummary[];
+          }
+        } catch (error) {
+          console.error("Error fetching exercise summary:", error);
+          // Continue with empty exercise summary
+        }
         
         return NextResponse.json({
           partner: partnerInfo,
@@ -174,16 +221,28 @@ export async function GET(req: NextRequest) {
         });
       } catch (error) {
         console.error("SQLite error fetching partner progress:", error);
+        // Add more detailed error information
+        let errorMessage = "An error occurred while fetching partner progress";
+        if (error instanceof Error) {
+          errorMessage += `: ${error.message}`;
+          console.error("Error stack:", error.stack);
+        }
         return NextResponse.json(
-          { error: "An error occurred while fetching partner progress in development" },
+          { error: errorMessage },
           { status: 500 }
         );
       }
     }
   } catch (error) {
     console.error("Error fetching partner progress:", error);
+    // Add more detailed error information 
+    let errorMessage = "An error occurred while fetching partner progress";
+    if (error instanceof Error) {
+      errorMessage += `: ${error.message}`;
+      console.error("Error stack:", error.stack);
+    }
     return NextResponse.json(
-      { error: "An error occurred while fetching partner progress" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
