@@ -25,20 +25,20 @@ export async function GET(req: NextRequest) {
     // In production with MySQL
     if (isProduction) {
       try {
-        // Import MySQL client
-        const { mysqlDb } = await import('@/lib/mysql-db');
+        // Import PostgreSQL client
+        const { mysqlDb } = await import('@/lib/pg-db');
         
         // Get workouts from the database for the authenticated user
         const workouts = await mysqlDb.query(`
           SELECT id, name, date, notes 
           FROM workouts 
-          WHERE user_id = ? 
+          WHERE user_id = $1 
           ORDER BY date DESC
         `, [userId]);
         
         return NextResponse.json(workouts);
       } catch (error) {
-        console.error("MySQL error fetching workouts:", error);
+        console.error("PostgreSQL error fetching workouts:", error);
         return NextResponse.json(
           { error: "An error occurred while fetching the workouts in production" },
           { status: 500 }
@@ -100,35 +100,31 @@ export async function POST(req: NextRequest) {
     // In production with MySQL
     if (isProduction) {
       try {
-        // Import MySQL client
-        const { mysqlDb } = await import('@/lib/mysql-db');
+        // Import PostgreSQL client
+        const { mysqlDb } = await import('@/lib/pg-db');
         
         // Start a transaction
         await mysqlDb.query('START TRANSACTION');
         
         try {
-          // Insert workout into the database
+          // Insert the workout
           const workoutId = await mysqlDb.insert(`
-            INSERT INTO workouts (user_id, name, date, notes)
-            VALUES (?, ?, ?, ?)
-          `, [userId, body.name, body.date, body.notes || null]);
+            INSERT INTO workouts (name, date, notes, user_id, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          `, [body.name, body.date, body.notes || null, userId]);
           
-          // If exercises are provided, insert them
-          if (body.exercises && Array.isArray(body.exercises) && body.exercises.length > 0) {
+          // Insert the exercises if any
+          if (body.exercises && body.exercises.length > 0) {
             for (const exercise of body.exercises) {
-              if (!exercise.name || !exercise.sets || !exercise.reps) {
-                continue; // Skip invalid exercises
-              }
-              
               await mysqlDb.insert(`
-                INSERT INTO exercises (workout_id, name, sets, reps, weight)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO exercises (name, sets, reps, weight, workout_id, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
               `, [
-                workoutId,
                 exercise.name,
-                exercise.sets,
-                exercise.reps,
-                exercise.weight || null
+                exercise.sets || null,
+                exercise.reps || null,
+                exercise.weight || null,
+                workoutId
               ]);
             }
           }
@@ -136,17 +132,20 @@ export async function POST(req: NextRequest) {
           // Commit the transaction
           await mysqlDb.query('COMMIT');
           
-          return NextResponse.json(
-            { id: workoutId, message: "Workout created successfully" },
-            { status: 201 }
-          );
+          return NextResponse.json({
+            id: workoutId,
+            name: body.name,
+            date: body.date,
+            notes: body.notes || null,
+            exercises: body.exercises || []
+          }, { status: 201 });
         } catch (error) {
           // Rollback on error
           await mysqlDb.query('ROLLBACK');
           throw error;
         }
       } catch (error) {
-        console.error("MySQL error creating workout:", error);
+        console.error("PostgreSQL error creating workout:", error);
         return NextResponse.json(
           { error: "An error occurred while creating the workout in production" },
           { status: 500 }
