@@ -13,7 +13,7 @@ try {
 }
 
 // Get database connection string from environment variables
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/gymbro';
 
 // Create a connection pool if we have the URL and pg module
 let pool: any = null;
@@ -23,26 +23,52 @@ async function getPool() {
   if (!pool && pg && DATABASE_URL) {
     try {
       const { Pool } = pg;
+      
+      // Check if connection string is valid
+      if (DATABASE_URL === 'your-connection-string' || 
+          DATABASE_URL.includes('your-connection-string') ||
+          DATABASE_URL.includes('example.com')) {
+        console.error('Invalid DATABASE_URL. Please set a valid PostgreSQL connection string in your environment variables.');
+        throw new Error('Invalid DATABASE_URL configuration. Please check your environment variables.');
+      }
+      
       pool = new Pool({
         connectionString: DATABASE_URL,
         ssl: {
           rejectUnauthorized: false
-        }
+        },
+        // Add connection timeout to avoid hanging during deployment
+        connectionTimeoutMillis: 5000, 
+        // Add idle timeout
+        idleTimeoutMillis: 30000
       });
-      console.log('PostgreSQL pool created successfully');
-    } catch (error) {
+      
+      // Test the connection
+      const client = await pool.connect();
+      await client.query('SELECT NOW()');
+      client.release();
+      
+      console.log('PostgreSQL connection established successfully');
+    } catch (error: any) {
       console.error('Failed to create PostgreSQL pool:', error);
-      throw error;
+      // Reset pool to allow retry on next request
+      pool = null;
+      
+      throw new Error(`PostgreSQL connection failed: ${error.message || 'Unknown error'}`);
     }
   }
   
   if (!pool) {
     if (!pg) {
-      throw new Error('PostgreSQL module not available');
+      console.error('PostgreSQL client library not available');
+      throw new Error('PostgreSQL module not available. Run "npm install pg @types/pg" to install.');
     }
     if (!DATABASE_URL) {
-      throw new Error('DATABASE_URL environment variable not set');
+      console.error('DATABASE_URL environment variable not set');
+      throw new Error('DATABASE_URL environment variable is required for PostgreSQL connection.');
     }
+    
+    throw new Error('Failed to initialize PostgreSQL connection pool.');
   }
   
   return pool;
@@ -50,8 +76,8 @@ async function getPool() {
 
 // Helper for executing a query with parameters
 export async function query(sql: string, params: any[] = []) {
-  const pool = await getPool();
   try {
+    const pool = await getPool();
     const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
@@ -73,8 +99,8 @@ export async function queryRow(sql: string, params: any[] = []) {
 
 // Helper for inserting data and getting the inserted ID
 export async function insert(sql: string, params: any[] = []) {
-  const pool = await getPool();
   try {
+    const pool = await getPool();
     // Modify the SQL to return the inserted ID
     const modifiedSql = `${sql} RETURNING id`;
     const result = await pool.query(modifiedSql, params);
@@ -87,8 +113,8 @@ export async function insert(sql: string, params: any[] = []) {
 
 // Helper for updating data and getting affected rows count
 export async function update(sql: string, params: any[] = []) {
-  const pool = await getPool();
   try {
+    const pool = await getPool();
     const result = await pool.query(sql, params);
     return result.rowCount;
   } catch (error) {
@@ -99,20 +125,39 @@ export async function update(sql: string, params: any[] = []) {
 
 // Transaction support
 export async function startTransaction() {
-  const pool = await getPool();
-  const client = await pool.connect();
-  await client.query('BEGIN');
-  return client;
+  try {
+    const pool = await getPool();
+    const client = await pool.connect();
+    await client.query('BEGIN');
+    return client;
+  } catch (error) {
+    console.error('PostgreSQL transaction start error:', error);
+    throw error;
+  }
 }
 
 export async function commit(client: any) {
-  await client.query('COMMIT');
-  client.release();
+  try {
+    await client.query('COMMIT');
+    client.release();
+  } catch (error) {
+    console.error('PostgreSQL transaction commit error:', error);
+    // Always try to release client back to pool
+    try { client.release(); } catch {}
+    throw error;
+  }
 }
 
 export async function rollback(client: any) {
-  await client.query('ROLLBACK');
-  client.release();
+  try {
+    await client.query('ROLLBACK');
+    client.release();
+  } catch (error) {
+    console.error('PostgreSQL transaction rollback error:', error);
+    // Always try to release client back to pool
+    try { client.release(); } catch {}
+    throw error;
+  }
 }
 
 // Expose the database functions with the same interface
@@ -123,17 +168,22 @@ export const mysqlDb = {
   update,
   // Transaction-aware query function
   query: async (sql: string, params: any[] = []) => {
-    if (sql === 'START TRANSACTION') {
-      await query('BEGIN', []);
-      return [];
-    } else if (sql === 'COMMIT') {
-      await query('COMMIT', []);
-      return [];
-    } else if (sql === 'ROLLBACK') {
-      await query('ROLLBACK', []);
-      return [];
-    } else {
-      return query(sql, params);
+    try {
+      if (sql === 'START TRANSACTION') {
+        await query('BEGIN', []);
+        return [];
+      } else if (sql === 'COMMIT') {
+        await query('COMMIT', []);
+        return [];
+      } else if (sql === 'ROLLBACK') {
+        await query('ROLLBACK', []);
+        return [];
+      } else {
+        return query(sql, params);
+      }
+    } catch (error) {
+      console.error('PostgreSQL transaction query error:', error);
+      throw error;
     }
   }
 }; 

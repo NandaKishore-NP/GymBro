@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // In production with MySQL
+    // In production with PostgreSQL
     if (isProduction) {
       try {
         // Import PostgreSQL client instead of MySQL
@@ -78,12 +78,13 @@ export async function POST(req: NextRequest) {
     // In development with SQLite
     else {
       try {
-        // We're using a type assertion here because our db.ts file ensures
-        // that in development mode, DB will not be null.
-        const database = db as Database;
+        // Check if db is available
+        if (!db) {
+          throw new Error("Database is not initialized in development mode");
+        }
         
         // Check if user already exists
-        const existingUser = database.prepare("SELECT * FROM users WHERE email = ?").get(email);
+        const existingUser = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
         
         if (existingUser) {
           return NextResponse.json(
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
         }
         
         // Insert user into database
-        const insertStmt = database.prepare(
+        const insertStmt = db.prepare(
           "INSERT INTO users (name, email, password) VALUES (?, ?, ?)"
         );
         
