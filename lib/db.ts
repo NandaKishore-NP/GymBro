@@ -1,9 +1,9 @@
-// This is a database adapter that uses SQLite locally and MySQL in production
+// This is a database adapter that uses SQLite locally and PostgreSQL in production
 import { Database } from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-// Check if running in production (Vercel)
+// Check if running in production
 const isProduction = process.env.NODE_ENV === 'production';
 
 // SQLite database for development
@@ -89,9 +89,11 @@ if (!isProduction) {
 
 // This is the database interface we export
 // In development, it's just SQLite
-// In production, we'll use MySQL via the API routes
+// In production, we'll use PostgreSQL via the API routes
 export const db = isProduction ? null : sqliteDb as Database;
 
-// For the production database, you'll need to:
-// 1. Use the mysql-db.ts file to connect to MySQL
-// 2. Update each API route to use MySQL in production OR use the adapter pattern 
+// For the production database, we use pg-db.ts instead of mysql-db.ts
+// In your API routes, replace:
+// const { mysqlDb } = await import('@/lib/mysql-db');
+// with:
+// const { mysqlDb } = await import('@/lib/pg-db'); 
