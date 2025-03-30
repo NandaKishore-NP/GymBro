@@ -28,7 +28,7 @@ export default function AboutPage() {
               and helps you see real progress in your fitness journey.
             </p>
             <p className="text-lg text-gray-700 dark:text-gray-300">
-              Whether you're just starting out or you're a seasoned athlete, GymBro is designed to adapt to your needs, 
+              Whether you&apos;re just starting out or you&apos;re a seasoned athlete, GymBro is designed to adapt to your needs, 
               helping you stay consistent, track your improvements, and celebrate your achievements along the way.
             </p>
           </div>
