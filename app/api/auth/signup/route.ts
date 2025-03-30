@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // In production with MySQL
+    // In production with PostgreSQL
     if (isProduction) {
       try {
         // Import PostgreSQL client instead of MySQL
@@ -78,9 +78,13 @@ export async function POST(req: NextRequest) {
     // In development with SQLite
     else {
       try {
-        // We're using a type assertion here because our db.ts file ensures
-        // that in development mode, DB will not be null.
-        const database = db as Database;
+        // We need to ensure db is not null before using it
+        if (!db) {
+          throw new Error("Database is not initialized in development mode");
+        }
+        
+        // Now TypeScript knows db is not null
+        const database = db;
         
         // Check if user already exists
         const existingUser = database.prepare("SELECT * FROM users WHERE email = ?").get(email);
