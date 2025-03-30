@@ -179,6 +179,10 @@ body {
     animation: pulse-border 2s infinite;
   }
   
+  .footer-link {
+    @apply text-gray-300 hover:text-white transition-colors;
+  }
+  
   @keyframes pulse-border {
     0% {
       box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4);

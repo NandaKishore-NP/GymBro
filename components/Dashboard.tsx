@@ -529,7 +529,7 @@ const WorkoutsPanel = ({
       
       {workouts.length > 6 && (
         <div className="text-center mt-6">
-          <Link href="/workouts" className="text-primary hover:text-primary-dark transition-colors">
+          <Link href="/workouts" className="btn-primary text-sm py-1 px-3">
             View All Workouts
           </Link>
         </div>
@@ -574,7 +574,7 @@ const ProgressPanel = ({
       <div className="card">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg md:text-xl font-semibold">Weight Progress</h3>
-          <Link href="/statistics" className="text-primary hover:text-blue-700 text-sm">
+          <Link href="/statistics" className="btn-primary text-sm py-1 px-3">
             View Detailed Stats
           </Link>
         </div>

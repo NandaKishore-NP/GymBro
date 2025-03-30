@@ -131,7 +131,7 @@ export default function RecommendedWorkouts() {
           
           <Link 
             href={`/workouts/library/${currentWorkout.id}`}
-            className="block w-full bg-primary hover:bg-primary-dark text-white text-center py-2 rounded-md transition-colors"
+            className="btn-primary w-full justify-center"
           >
             View Workout Details
           </Link>

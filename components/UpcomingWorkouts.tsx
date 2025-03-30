@@ -69,7 +69,7 @@ const UpcomingWorkouts = () => {
           <FaCalendarAlt className="mr-2 text-primary" />
           Upcoming Workouts
         </h3>
-        <Link href="/schedule" className="text-primary hover:text-primary-dark text-sm flex items-center gap-1">
+        <Link href="/schedule" className="btn-primary text-sm py-1 px-3 flex items-center gap-1">
           View All
           <FaChevronRight size={12} />
         </Link>
