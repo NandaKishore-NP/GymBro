@@ -45,14 +45,14 @@ export async function GET(
     // In production with MySQL
     if (isProduction) {
       try {
-        // Import MySQL client
-        const { mysqlDb } = await import('@/lib/mysql-db');
+        // Import PostgreSQL client
+        const { mysqlDb } = await import('@/lib/pg-db');
         
         // Get the workout
         const workout = await mysqlDb.queryRow(`
           SELECT id, name, date, notes
           FROM workouts
-          WHERE id = ? AND user_id = ?
+          WHERE id = $1 AND user_id = $2
         `, [workoutId, userId]) as Workout | null;
         
         if (!workout) {
@@ -63,7 +63,7 @@ export async function GET(
         const exercises = await mysqlDb.query(`
           SELECT id, name, sets, reps, weight
           FROM exercises
-          WHERE workout_id = ?
+          WHERE workout_id = $1
           ORDER BY id ASC
         `, [workoutId]) as Exercise[];
         
@@ -75,7 +75,7 @@ export async function GET(
           exercises
         });
       } catch (error) {
-        console.error("MySQL error fetching workout:", error);
+        console.error("PostgreSQL error fetching workout:", error);
         return NextResponse.json(
           { error: "An error occurred while fetching the workout in production" },
           { status: 500 }

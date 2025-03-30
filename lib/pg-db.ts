@@ -1,5 +1,5 @@
 /**
- * PostgreSQL database client for production environment (Supabase)
+ * PostgreSQL database client for production environment (CockroachDB)
  */
 
 // Dynamically import pg in a try-catch to avoid build issues
@@ -13,7 +13,7 @@ try {
 }
 
 // Get database connection string from environment variables
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/gymbro';
+const DATABASE_URL = process.env.DATABASE_URL;
 
 // Create a connection pool if we have the URL and pg module
 let pool: any = null;
@@ -24,37 +24,36 @@ async function getPool() {
     try {
       const { Pool } = pg;
       
-      // Check if connection string is valid
-      if (DATABASE_URL === 'your-connection-string' || 
-          DATABASE_URL.includes('your-connection-string') ||
-          DATABASE_URL.includes('example.com')) {
-        console.error('Invalid DATABASE_URL. Please set a valid PostgreSQL connection string in your environment variables.');
-        throw new Error('Invalid DATABASE_URL configuration. Please check your environment variables.');
-      }
-      
+      // CockroachDB specific configuration
       pool = new Pool({
         connectionString: DATABASE_URL,
         ssl: {
-          rejectUnauthorized: false
+          rejectUnauthorized: true // CockroachDB requires SSL verification
         },
         // Add connection timeout to avoid hanging during deployment
-        connectionTimeoutMillis: 5000, 
+        connectionTimeoutMillis: 10000, // 10 seconds timeout for connection
         // Add idle timeout
-        idleTimeoutMillis: 30000
+        idleTimeoutMillis: 30000,
+        // Set statement timeout to avoid long-running queries
+        statement_timeout: 10000 // 10 seconds
       });
       
       // Test the connection
-      const client = await pool.connect();
-      await client.query('SELECT NOW()');
-      client.release();
-      
-      console.log('PostgreSQL connection established successfully');
+      try {
+        const client = await pool.connect();
+        await client.query('SELECT 1');
+        client.release();
+        console.log('PostgreSQL/CockroachDB connection established successfully');
+      } catch (testError) {
+        console.error('Database connection test failed:', testError);
+        throw testError;
+      }
     } catch (error: any) {
-      console.error('Failed to create PostgreSQL pool:', error);
+      console.error('Failed to create PostgreSQL/CockroachDB pool:', error);
       // Reset pool to allow retry on next request
       pool = null;
       
-      throw new Error(`PostgreSQL connection failed: ${error.message || 'Unknown error'}`);
+      throw new Error(`Database connection failed: ${error.message || 'Unknown error'}`);
     }
   }
   
@@ -65,10 +64,10 @@ async function getPool() {
     }
     if (!DATABASE_URL) {
       console.error('DATABASE_URL environment variable not set');
-      throw new Error('DATABASE_URL environment variable is required for PostgreSQL connection.');
+      throw new Error('DATABASE_URL environment variable is required for database connection.');
     }
     
-    throw new Error('Failed to initialize PostgreSQL connection pool.');
+    throw new Error('Failed to initialize database connection pool.');
   }
   
   return pool;

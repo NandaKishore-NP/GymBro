@@ -49,15 +49,15 @@ export async function GET(req: NextRequest) {
     
     const userId = session.user.id;
     
-    // In production with MySQL
+    // In production environment
     if (isProduction) {
       try {
-        // Dynamic import MySQL client to reduce cold start time
-        const { mysqlDb } = await import('@/lib/mysql-db');
+        // Dynamic import PostgreSQL client to reduce cold start time
+        const { mysqlDb } = await import('@/lib/pg-db');
         
         // Get basic user data
         const user = await mysqlDb.queryRow(
-          'SELECT id, name, email, created_at FROM users WHERE id = ?',
+          'SELECT id, name, email, created_at FROM users WHERE id = $1',
           [userId]
         ) as User;
         
@@ -67,13 +67,13 @@ export async function GET(req: NextRequest) {
         
         // Get the latest weight log
         const latestWeight = await mysqlDb.queryRow(
-          'SELECT weight, date FROM weight_logs WHERE user_id = ? ORDER BY date DESC LIMIT 1',
+          'SELECT weight, date FROM weight_logs WHERE user_id = $1 ORDER BY date DESC LIMIT 1',
           [userId]
         ) as WeightLog | null;
         
         // Get the user's target weight (if exists)
         const userProfile = await mysqlDb.queryRow(
-          'SELECT height, target_weight FROM user_profiles WHERE user_id = ?',
+          'SELECT height, target_weight FROM user_profiles WHERE user_id = $1',
           [userId]
         ) as UserProfile | null;
         
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
           height: userProfile?.height || null,
         });
       } catch (error) {
-        console.error("MySQL error:", error);
+        console.error("PostgreSQL error:", error);
         return NextResponse.json(
           { error: "Database error occurred in production environment" },
           { status: 500 }
