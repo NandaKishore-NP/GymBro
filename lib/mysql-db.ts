@@ -22,18 +22,10 @@ let pool: any = null;
 async function getPool() {
   if (!pool && mysql && DATABASE_URL) {
     try {
-      pool = mysql.createPool({
-        uri: DATABASE_URL,
-        ssl: {
-          rejectUnauthorized: true
-        },
-        // Connection pool settings
-        waitForConnections: true,
-        connectionLimit: 10,
-        maxIdle: 10,
-        idleTimeout: 60000,
-        queueLimit: 0
-      });
+      // Extract connection parts from DATABASE_URL without sslmode
+      // Use a more direct approach that avoids passing invalid SSL options
+      pool = mysql.createPool(DATABASE_URL);
+      
       console.log('MySQL pool created successfully');
     } catch (error) {
       console.error('Failed to create MySQL pool:', error);
