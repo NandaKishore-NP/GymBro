@@ -6,8 +6,12 @@
 
 :root {
   --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 249, 250, 251;
+  --background-start-rgb: 246, 248, 250;
   --background-end-rgb: 255, 255, 255;
+  --primary-color: #4F46E5;
+  --accent-color: #06B6D4;
+  --card-hover-transform: translateY(-5px);
+  --transition-duration: 0.3s;
 }
 
 .dark {
@@ -19,37 +23,145 @@
 @media (prefers-color-scheme: dark) {
   :root:not(.dark):not(.light) {
     --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 31, 41, 55;
-    --background-end-rgb: 17, 24, 39;
+    --background-start-rgb: 15, 23, 42;
+    --background-end-rgb: 30, 41, 59;
   }
 }
 
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+    to bottom,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  min-height: 100vh;
   font-family: 'Poppins', sans-serif;
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors;
+/* Custom animations */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
   }
-  
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+/* Custom utility classes */
+.animate-pulse-slow {
+  animation: pulse-slow 3s infinite ease-in-out;
+}
+
+.animate-float {
+  animation: float 5s infinite ease-in-out;
+}
+
+/* Enhanced UI elements */
+.card {
+  @apply bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden p-4 transition-all duration-300 hover:shadow-lg;
+  transform: translateY(0);
+  transition: transform var(--transition-duration) ease, box-shadow var(--transition-duration) ease;
+}
+
+.card:hover {
+  transform: var(--card-hover-transform);
+}
+
+.card-gradient {
+  @apply bg-gradient-to-br from-indigo-50 to-cyan-50 dark:from-indigo-900/20 dark:to-cyan-900/20;
+}
+
+.nav-link {
+  @apply relative px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200;
+}
+
+.nav-link::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-accent transition-all duration-300 opacity-0;
+}
+
+.nav-link:hover::after {
+  @apply w-full opacity-100;
+}
+
+.btn {
+  @apply px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 transform hover:scale-105;
+}
+
+.btn-primary {
+  @apply bg-primary text-white hover:bg-primary-dark hover:shadow-md;
+}
+
+.btn-outline {
+  @apply border border-primary text-primary hover:bg-primary/10;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.dark .shimmer {
+  background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+  background-size: 200% 100%;
+}
+
+.nav-item-animation {
+  transition: all 0.3s ease;
+}
+
+.nav-item-animation:hover {
+  transform: translateY(-2px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(107, 114, 128, 0.7);
+}
+
+@layer components {
   .btn-secondary {
     @apply bg-secondary text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors;
   }
   
   .btn-danger {
     @apply bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors;
-  }
-  
-  .card {
-    @apply bg-white dark:bg-gray-800 rounded-xl shadow-md p-6;
   }
   
   .input {

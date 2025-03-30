@@ -24,20 +24,20 @@ export async function GET(req: NextRequest) {
     // In production with MySQL
     if (isProduction) {
       try {
-        // Import MySQL client
-        const { mysqlDb } = await import('@/lib/mysql-db');
+        // Import PostgreSQL client
+        const { mysqlDb } = await import('@/lib/pg-db');
         
         // Get weight logs for the user
         const weightLogs = await mysqlDb.query(`
           SELECT id, weight, date 
           FROM weight_logs 
-          WHERE user_id = ?
+          WHERE user_id = $1
           ORDER BY date ASC
         `, [userId]);
         
         return NextResponse.json(weightLogs);
       } catch (error) {
-        console.error("MySQL error fetching weight logs:", error);
+        console.error("PostgreSQL error fetching weight logs:", error);
         return NextResponse.json(
           { error: "An error occurred while fetching weight logs in production" },
           { status: 500 }

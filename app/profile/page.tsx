@@ -103,11 +103,17 @@ export default function ProfilePage() {
           .flat()
           .join(', ');
         setSaveError(errorMsg);
+        setIsLoading(false);
         return;
       }
       
-      // Save to the database
-      const response = await fetch('/api/profile', {
+      // Create a timeout promise
+      const timeoutPromise = new Promise<Response>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timed out after 15 seconds')), 15000);
+      });
+      
+      // Save to the database with timeout
+      const fetchPromise = fetch('/api/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -120,9 +126,23 @@ export default function ProfilePage() {
         }),
       });
       
+      // Race the fetch against a timeout
+      const response = await Promise.race([fetchPromise, timeoutPromise]);
+      
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update profile');
+        let errorMessage = 'Failed to update profile';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Error parsing response:', parseError);
+          // If response cannot be parsed as JSON, use text content for error
+          const textContent = await response.text();
+          if (textContent) {
+            errorMessage = `Server error: ${textContent.substring(0, 100)}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
       
       // Show success message
