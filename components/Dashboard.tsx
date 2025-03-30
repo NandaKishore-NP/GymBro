@@ -429,13 +429,13 @@ const TabButton = ({ active, onClick, icon, text }: { active: boolean, onClick: 
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-2 md:px-4 md:py-2 rounded-lg flex items-center text-sm md:text-base whitespace-nowrap ${
+      className={`rounded-lg flex items-center text-sm md:text-base whitespace-nowrap ${
         active 
-          ? 'bg-primary text-white' 
-          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+          ? 'btn-primary' 
+          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 px-3 py-2 md:px-4 md:py-2'
       }`}
     >
-      <span className="mr-2">{icon}</span>
+      <span className={active ? '' : 'mr-2'}>{icon}</span>
       <span>{text}</span>
     </button>
   );
@@ -475,8 +475,8 @@ const WorkoutsPanel = ({
         <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
           Start tracking your fitness journey by adding your first workout.
         </p>
-        <Link href="/workouts/new" className="btn-primary inline-flex items-center">
-          <FaPlus className="mr-2" />
+        <Link href="/workouts/new" className="new-workout-btn">
+          <FaPlus className="animate-pulse" />
           Add First Workout
         </Link>
       </div>
@@ -487,8 +487,8 @@ const WorkoutsPanel = ({
     <div>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg md:text-xl font-semibold">Recent Workouts</h3>
-        <Link href="/workouts/new" className="btn-primary text-sm flex items-center gap-1">
-          <FaPlus size={12} />
+        <Link href="/workouts/new" className="new-workout-btn">
+          <FaPlus className="animate-pulse" />
           <span>New Workout</span>
         </Link>
       </div>
@@ -561,7 +561,7 @@ const ProgressPanel = ({
         <p className="text-gray-600 dark:text-gray-400 mb-4">
           Your weight progress will appear here once you update your weight in your profile.
         </p>
-        <Link href="/profile" className="btn-primary inline-flex items-center">
+        <Link href="/profile" className="btn-primary">
           <FaUser className="mr-2" />
           Go to Profile
         </Link>
