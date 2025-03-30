@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { FaUser, FaUserFriends, FaEnvelope, FaSpinner, FaCheck, FaTimes, FaTrash } from 'react-icons/fa';
 import Header from '@/components/Header';
@@ -38,7 +38,7 @@ export default function PartnersPage() {
   const [receivedRelationships, setReceivedRelationships] = useState<Relationship[]>([]);
   
   // Fetch relationships data
-  const fetchRelationships = async () => {
+  const fetchRelationships = useCallback(async () => {
     if (!session?.user?.id) return;
     
     try {
@@ -60,11 +60,11 @@ export default function PartnersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session?.user?.id]);
   
   useEffect(() => {
     fetchRelationships();
-  }, [session?.user?.id]);
+  }, [fetchRelationships]);
   
   const handleAddPartner = async (e: React.FormEvent) => {
     e.preventDefault();
