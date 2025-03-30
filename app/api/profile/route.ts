@@ -120,6 +120,8 @@ export async function GET(req: NextRequest) {
           LIMIT 1
         `).get(userId) as WeightLog | undefined;
         
+        console.log('Latest weight from DB:', latestWeight);
+        
         // Get the user's target weight (if exists)
         const userProfile = database.prepare(`
           SELECT height, target_weight
@@ -127,13 +129,19 @@ export async function GET(req: NextRequest) {
           WHERE user_id = ?
         `).get(userId) as UserProfile | undefined;
         
-        return NextResponse.json({
+        console.log('User profile from DB:', userProfile);
+        
+        const response = {
           ...user,
           currentWeight: latestWeight?.weight || null,
           weightDate: latestWeight?.date || null,
           targetWeight: userProfile?.target_weight || null,
           height: userProfile?.height || null,
-        });
+        };
+        
+        console.log('Profile response:', response);
+        
+        return NextResponse.json(response);
       } catch (error) {
         console.error("SQLite error:", error);
         return NextResponse.json(

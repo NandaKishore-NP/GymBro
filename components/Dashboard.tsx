@@ -55,7 +55,8 @@ const Dashboard = () => {
     totalWorkouts: 0,
     activeDays: 0,
     avgHeartRate: 0,
-    currentWeight: 0
+    currentWeight: null as number | null,
+    weightChange: null as number | null
   });
   const [loading, setLoading] = useState({
     workouts: true,
@@ -63,6 +64,20 @@ const Dashboard = () => {
     progress: true
   });
   const [error, setError] = useState<string | null>(null);
+
+  // Reset stats when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up function that runs when component unmounts
+      setStats({
+        totalWorkouts: 0,
+        activeDays: 0,
+        avgHeartRate: 0,
+        currentWeight: null,
+        weightChange: null
+      });
+    };
+  }, []);
 
   // Fetch user's workouts
   useEffect(() => {
@@ -192,13 +207,15 @@ const Dashboard = () => {
         try {
           const responseText = await response.text();
           data = JSON.parse(responseText);
+          console.log('Profile data received:', data);
         } catch (parseError) {
           console.error('Error parsing profile JSON:', parseError);
           throw new Error('Failed to parse profile data from server');
         }
         
         // Update current weight in stats
-        if (data.currentWeight) {
+        // Only update if we have an actual weight (not null)
+        if (data.currentWeight !== null && data.currentWeight !== undefined) {
           setStats(prev => ({
             ...prev,
             currentWeight: data.currentWeight
@@ -246,24 +263,47 @@ const Dashboard = () => {
         try {
           const responseText = await response.text();
           weightData = JSON.parse(responseText);
+          console.log('Weight logs received:', weightData);
         } catch (parseError) {
           console.error('Error parsing weight logs JSON:', parseError);
           throw new Error('Failed to parse weight logs data from server');
         }
         
         if (weightData && weightData.length > 0) {
+          // The data is already sorted in descending order (most recent first)
           setWeightLogs(weightData);
           
-          // Format data for chart
+          // Calculate weight change if we have at least two entries
+          if (weightData.length >= 2) {
+            const currentWeight = weightData[0].weight;
+            const previousWeight = weightData[1].weight;
+            const weightChange = +(currentWeight - previousWeight).toFixed(1);
+            
+            setStats(prev => ({
+              ...prev,
+              currentWeight,
+              weightChange
+            }));
+          } else if (weightData.length === 1) {
+            setStats(prev => ({
+              ...prev,
+              currentWeight: weightData[0].weight
+            }));
+          }
+          
+          // For the chart display, we want chronological order (ascending)
+          const chronologicalWeightData = [...weightData].reverse();
+          
+          // Format data for chart - chronological order for the chart
           const chartData = {
-            labels: weightData.map((log: WeightLog) => {
+            labels: chronologicalWeightData.map((log: WeightLog) => {
               const date = new Date(log.date);
               return date.toLocaleDateString('default', { month: 'short', day: 'numeric' });
             }),
             datasets: [
               {
                 label: 'Weight (kg)',
-                data: weightData.map((log: WeightLog) => log.weight),
+                data: chronologicalWeightData.map((log: WeightLog) => log.weight),
                 borderColor: '#3B82F6',
                 backgroundColor: 'rgba(59, 130, 246, 0.5)',
                 tension: 0.3,
@@ -321,9 +361,12 @@ const Dashboard = () => {
           <StatCard 
             icon={<FaWeight />} 
             title="Current Weight" 
-            value={stats.currentWeight ? `${stats.currentWeight} kg` : '--'}
+            value={stats.currentWeight !== null && stats.currentWeight !== undefined 
+              ? `${stats.currentWeight} kg` 
+              : 'Not entered'}
             subtitle="Kilograms"
             loading={loading.profile}
+            changeValue={stats.weightChange}
           />
         </div>
       </motion.div>
@@ -395,13 +438,15 @@ const StatCard = ({
   title, 
   value, 
   subtitle,
-  loading
+  loading,
+  changeValue
 }: { 
   icon: React.ReactNode, 
   title: string, 
   value: string, 
   subtitle: string,
-  loading: boolean
+  loading: boolean,
+  changeValue?: number | null
 }) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 md:p-4 flex items-center">
@@ -416,7 +461,14 @@ const StatCard = ({
           </div>
         ) : (
           <>
-            <div className="text-lg md:text-xl font-semibold">{value}</div>
+            <div className="text-lg md:text-xl font-semibold flex items-center">
+              {value}
+              {changeValue !== undefined && changeValue !== null && (
+                <span className={`ml-2 text-sm ${changeValue > 0 ? 'text-red-500' : changeValue < 0 ? 'text-green-500' : 'text-gray-500'}`}>
+                  {changeValue > 0 ? `+${changeValue}` : changeValue}
+                </span>
+              )}
+            </div>
             <div className="text-xs md:text-sm text-gray-500">{title} • {subtitle}</div>
           </>
         )}

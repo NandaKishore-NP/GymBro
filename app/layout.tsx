@@ -5,6 +5,18 @@ import { Providers } from '@/lib/auth/providers';
 export const metadata: Metadata = {
   title: 'GymBro - Track Your Fitness Journey',
   description: 'A modern fitness tracking app to monitor your gym progress, get workout suggestions, and reach your fitness goals.',
+  icons: {
+    icon: [
+      {
+        url: '/favicon.svg',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/favicon-dark.svg',
+        media: '(prefers-color-scheme: dark)',
+      },
+    ],
+  },
 }
 
 // Add viewport configuration for better mobile responsiveness
@@ -41,6 +53,7 @@ export default function RootLayout({
             }
           `
         }} />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
       <body className="min-h-screen flex flex-col">
         <Providers>

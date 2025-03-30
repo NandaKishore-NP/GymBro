@@ -98,30 +98,13 @@ export default function Header() {
           <div className="flex items-center">
             <div className="logo-container relative">
               <div className="flex items-center">
-                <svg width="40" height="40" viewBox="0 0 40 40" className="mr-2">
-                  <defs>
-                    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#4F46E5" />
-                      <stop offset="100%" stopColor="#06B6D4" />
-                    </linearGradient>
-                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feGaussianBlur stdDeviation="2" result="glow" />
-                      <feMerge>
-                        <feMergeNode in="glow" />
-                        <feMergeNode in="SourceGraphic" />
-                      </feMerge>
-                    </filter>
-                  </defs>
-                  <circle cx="20" cy="20" r="18" stroke="url(#logoGradient)" strokeWidth="2" fill="none" className="animate-pulse-slow" />
-                  <path 
-                    d="M10 16 L10 30 M10 20 L14 20 M18 16 L18 30 M14 16 L22 16 M26 16 C30 16 30 20 26 20 C30 20 30 24 26 24 L22 24 L22 16" 
-                    stroke="url(#logoGradient)" 
-                    strokeWidth="2.5" 
-                    strokeLinecap="round" 
-                    fill="none"
-                    filter="url(#glow)"
-                    className="dark:stroke-white" />
-                </svg>
+                <Image
+                  src="/logo.svg"
+                  alt="GymBro Logo"
+                  width={40}
+                  height={40}
+                  className="mr-2"
+                />
                 <span className="text-2xl font-extrabold">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Gym</span>
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent to-primary">Bro</span>

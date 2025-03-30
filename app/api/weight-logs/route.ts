@@ -56,8 +56,10 @@ export async function GET(req: NextRequest) {
           SELECT id, weight, date 
           FROM weight_logs 
           WHERE user_id = ?
-          ORDER BY date ASC
+          ORDER BY date DESC
         `).all(userId);
+        
+        console.log('Weight logs from DB:', weightLogs);
         
         return NextResponse.json(weightLogs);
       } catch (error) {

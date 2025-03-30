@@ -1,0 +1,26 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Circle background -->
+  <circle cx="16" cy="16" r="15" fill="white" stroke="url(#logoGradient)" stroke-width="2" />
+  
+  <!-- Dumbbell simplified -->
+  <rect x="8" y="13" width="16" height="2" rx="1" fill="url(#logoGradient)" />
+  <rect x="8" y="17" width="16" height="2" rx="1" fill="url(#logoGradient)" />
+  
+  <!-- Weights -->
+  <rect x="5" y="11" width="3" height="10" rx="1.5" fill="url(#logoGradient)" />
+  <rect x="24" y="11" width="3" height="10" rx="1.5" fill="url(#logoGradient)" />
+  
+  <!-- GB stylized -->
+  <path d="M15 9 A7 7 0 1 0 15 23 L15 19 L12 19 L12 15 L14 15" 
+        stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  
+  <path d="M17 9 L17 23 M17 9 L20 9 C22 9 23 11 21 13 C23 15 22 17 20 17 L17 17 M17 17 L20 17 C22 17 23 19 21 21 C20 23 18 23 17 23" 
+        stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+</svg> 
