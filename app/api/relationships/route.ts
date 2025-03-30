@@ -168,20 +168,51 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Relationship already exists" }, { status: 409 });
         }
         
-        // Create the relationship
-        await mysqlDb.query(`
-          INSERT INTO user_relationships (user_id, related_user_id, relationship_type)
-          VALUES ($1, $2, $3)
-        `, [userId, relatedUserId, relationshipType]);
-        
-        return NextResponse.json({ 
-          message: "Relationship request sent",
-          status: "pending"
-        });
+        try {
+          // Start a transaction
+          await mysqlDb.query('BEGIN');
+          
+          // Check if the user_relationships table exists, create it if not
+          await mysqlDb.query(`
+            CREATE TABLE IF NOT EXISTS user_relationships (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              related_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              relationship_type VARCHAR(50) NOT NULL,
+              status VARCHAR(50) NOT NULL DEFAULT 'pending',
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(user_id, related_user_id)
+            )
+          `);
+          
+          // Create the relationship
+          await mysqlDb.query(`
+            INSERT INTO user_relationships (user_id, related_user_id, relationship_type)
+            VALUES ($1, $2, $3)
+          `, [userId, relatedUserId, relationshipType]);
+          
+          // Commit the transaction
+          await mysqlDb.query('COMMIT');
+          
+          return NextResponse.json({ 
+            message: "Relationship request sent",
+            status: "pending"
+          });
+        } catch (error) {
+          // Rollback on error
+          await mysqlDb.query('ROLLBACK');
+          console.error("Transaction error:", error);
+          throw error;
+        }
       } catch (error) {
         console.error("PostgreSQL error creating relationship:", error);
+        let errorMsg = "An error occurred while creating relationship in production";
+        if (error instanceof Error) {
+          errorMsg += `: ${error.message}`;
+        }
         return NextResponse.json(
-          { error: "An error occurred while creating relationship in production" },
+          { error: errorMsg },
           { status: 500 }
         );
       }
@@ -278,35 +309,67 @@ export async function PATCH(req: NextRequest) {
       try {
         // Import PostgreSQL client
         const { mysqlDb } = await import('@/lib/pg-db');
-        
-        // Check if the relationship exists and the current user is the related user
-        const relationship = await mysqlDb.query(`
-          SELECT id FROM user_relationships 
-          WHERE id = $1 AND related_user_id = $2 AND status = 'pending'
-        `, [relationshipId, userId]) as { id: number } | undefined;
-        
-        if (!relationship) {
-          return NextResponse.json(
-            { error: "Relationship not found or not pending" },
-            { status: 404 }
-          );
+
+        try {
+          // Start a transaction
+          await mysqlDb.query('BEGIN');
+          
+          // Check if the user_relationships table exists, create it if not
+          await mysqlDb.query(`
+            CREATE TABLE IF NOT EXISTS user_relationships (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              related_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              relationship_type VARCHAR(50) NOT NULL,
+              status VARCHAR(50) NOT NULL DEFAULT 'pending',
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(user_id, related_user_id)
+            )
+          `);
+          
+          // Check if the relationship exists and the current user is the related user
+          const relationship = await mysqlDb.query(`
+            SELECT id FROM user_relationships 
+            WHERE id = $1 AND related_user_id = $2 AND status = 'pending'
+          `, [relationshipId, userId]);
+          
+          if (!relationship || relationship.length === 0) {
+            await mysqlDb.query('ROLLBACK');
+            return NextResponse.json(
+              { error: "Relationship not found or not pending" },
+              { status: 404 }
+            );
+          }
+          
+          // Update the relationship status
+          await mysqlDb.query(`
+            UPDATE user_relationships
+            SET status = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2
+          `, [status, relationshipId]);
+          
+          // Commit the transaction
+          await mysqlDb.query('COMMIT');
+          
+          return NextResponse.json({ 
+            message: `Relationship ${status}`,
+            status: status
+          });
+        } catch (error) {
+          // Rollback on error
+          await mysqlDb.query('ROLLBACK');
+          console.error("Transaction error:", error);
+          throw error;
         }
-        
-        // Update the relationship status
-        await mysqlDb.query(`
-          UPDATE user_relationships
-          SET status = $1, updated_at = CURRENT_TIMESTAMP
-          WHERE id = $2
-        `, [status, relationshipId]);
-        
-        return NextResponse.json({ 
-          message: `Relationship ${status}`,
-          status: status
-        });
       } catch (error) {
         console.error("PostgreSQL error updating relationship:", error);
+        let errorMsg = "An error occurred while updating relationship in production";
+        if (error instanceof Error) {
+          errorMsg += `: ${error.message}`;
+        }
         return NextResponse.json(
-          { error: "An error occurred while updating relationship in production" },
+          { error: errorMsg },
           { status: 500 }
         );
       }
@@ -383,32 +446,50 @@ export async function DELETE(req: NextRequest) {
         // Import PostgreSQL client
         const { mysqlDb } = await import('@/lib/pg-db');
         
-        // Check if the relationship exists and the current user is involved
-        const relationship = await mysqlDb.query(`
-          SELECT id FROM user_relationships 
-          WHERE id = $1 AND (user_id = $2 OR related_user_id = $2)
-        `, [relationshipId, userId]) as { id: number } | undefined;
-        
-        if (!relationship) {
-          return NextResponse.json(
-            { error: "Relationship not found or you do not have permission" },
-            { status: 404 }
-          );
+        try {
+          // Start a transaction
+          await mysqlDb.query('BEGIN');
+          
+          // Check if the relationship exists and the current user is involved
+          const relationship = await mysqlDb.query(`
+            SELECT id FROM user_relationships 
+            WHERE id = $1 AND (user_id = $2 OR related_user_id = $2)
+          `, [relationshipId, userId]);
+          
+          if (!relationship || relationship.length === 0) {
+            await mysqlDb.query('ROLLBACK');
+            return NextResponse.json(
+              { error: "Relationship not found or you do not have permission" },
+              { status: 404 }
+            );
+          }
+          
+          // Delete the relationship
+          await mysqlDb.query(`
+            DELETE FROM user_relationships
+            WHERE id = $1
+          `, [relationshipId]);
+          
+          // Commit the transaction
+          await mysqlDb.query('COMMIT');
+          
+          return NextResponse.json({ 
+            message: "Relationship deleted"
+          });
+        } catch (error) {
+          // Rollback on error
+          await mysqlDb.query('ROLLBACK');
+          console.error("Transaction error:", error);
+          throw error;
         }
-        
-        // Delete the relationship
-        await mysqlDb.query(`
-          DELETE FROM user_relationships
-          WHERE id = $1
-        `, [relationshipId]);
-        
-        return NextResponse.json({ 
-          message: "Relationship deleted"
-        });
       } catch (error) {
         console.error("PostgreSQL error deleting relationship:", error);
+        let errorMsg = "An error occurred while deleting relationship in production";
+        if (error instanceof Error) {
+          errorMsg += `: ${error.message}`;
+        }
         return NextResponse.json(
-          { error: "An error occurred while deleting relationship in production" },
+          { error: errorMsg },
           { status: 500 }
         );
       }
