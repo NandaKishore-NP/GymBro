@@ -20,6 +20,7 @@ const workoutSchema = z.object({
   name: z.string().min(1, "Workout name is required"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   notes: z.string().optional(),
+  heart_rate: z.number().int().min(20, "Heart rate must be at least 20 BPM").max(250, "Heart rate must be at most 250 BPM").optional(),
   exercises: z.array(exerciseSchema).min(1, "At least one exercise is required"),
 });
 
@@ -36,6 +37,7 @@ export default function EditWorkoutPage({ params }: { params: { id: string } }) 
   const [name, setName] = useState('');
   const [date, setDate] = useState('');
   const [notes, setNotes] = useState('');
+  const [heartRate, setHeartRate] = useState<string>('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,6 +64,7 @@ export default function EditWorkoutPage({ params }: { params: { id: string } }) 
         setName(data.name);
         setDate(data.date.split('T')[0]); // Format date properly
         setNotes(data.notes || '');
+        setHeartRate(data.heart_rate ? data.heart_rate.toString() : '');
         setExercises(data.exercises || []);
       } catch (err: any) {
         console.error('Error fetching workout:', err);
@@ -114,6 +117,7 @@ export default function EditWorkoutPage({ params }: { params: { id: string } }) 
         name,
         date,
         notes,
+        heart_rate: heartRate ? Number(heartRate) : undefined,
         exercises: exercises.filter(ex => ex.name.trim() !== ''), // Only validate exercises with names
       });
       
@@ -136,6 +140,7 @@ export default function EditWorkoutPage({ params }: { params: { id: string } }) 
           name,
           date,
           notes: notes || null,
+          heart_rate: heartRate ? Number(heartRate) : null,
           exercises: exercises.filter(ex => ex.name.trim() !== ''), // Only save exercises with names
         }),
       });
@@ -226,6 +231,24 @@ export default function EditWorkoutPage({ params }: { params: { id: string } }) 
                 disabled={isSubmitting}
               />
             </div>
+          </div>
+          
+          <div className="mb-6">
+            <label htmlFor="heartRate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Average Heart Rate (BPM)
+            </label>
+            <input
+              id="heartRate"
+              type="number"
+              min="20"
+              max="250"
+              value={heartRate}
+              onChange={(e) => setHeartRate(e.target.value)}
+              placeholder="e.g., 135"
+              className="input w-full md:w-1/3"
+              disabled={isSubmitting}
+            />
+            <p className="mt-1 text-xs text-gray-500">Optional, but helps track workout intensity</p>
           </div>
           
           <div className="mb-6">

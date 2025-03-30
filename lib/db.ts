@@ -39,6 +39,7 @@ try {
       name TEXT NOT NULL,
       date TEXT NOT NULL,
       notes TEXT,
+      heart_rate INTEGER,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

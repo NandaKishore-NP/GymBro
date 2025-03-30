@@ -9,7 +9,8 @@ import {
   FaRunning, 
   FaSpinner, 
   FaFireAlt,
-  FaChartLine
+  FaChartLine,
+  FaHeartbeat
 } from 'react-icons/fa';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -47,6 +48,7 @@ interface Workout {
   name: string;
   date: string;
   notes: string | null;
+  heart_rate: number | null;
   exercises: Exercise[];
 }
 
@@ -67,7 +69,9 @@ export default function StatisticsPage() {
     weightChange: 0,
     averageWorkoutsPerWeek: 0,
     mostFrequentExercise: '',
-    heaviestWeight: 0
+    heaviestWeight: 0,
+    avgHeartRate: 0,
+    maxHeartRate: 0
   });
   
   // Fetch workouts and weight data
@@ -84,36 +88,32 @@ export default function StatisticsPage() {
         const workoutsData = await workoutsResponse.json();
         setWorkouts(workoutsData);
         
-        // Fetch user profile to get weight logs
-        const profileResponse = await fetch('/api/profile');
-        if (!profileResponse.ok) throw new Error('Failed to fetch profile');
-        const profileData = await profileResponse.json();
+        // Fetch actual weight logs
+        const weightLogsResponse = await fetch('/api/weight-logs');
+        if (!weightLogsResponse.ok) throw new Error('Failed to fetch weight logs');
+        const weightLogsData = await weightLogsResponse.json();
         
-        // Generate sample weight logs for demo purposes
-        const today = new Date();
-        const sampleWeightLogs: WeightLog[] = [];
-        for (let i = 60; i >= 0; i--) {
-          const date = new Date();
-          date.setDate(today.getDate() - i);
-          
-          // Only include weight entries for certain days to make it look realistic
-          if (i % 7 === 0 || i === 0 || i === 7 || i === 14 || i === 30 || i === 60) {
-            // Generate slightly decreasing weight values
-            const baseWeight = profileData.currentWeight ? profileData.currentWeight : 70;
-            const randomVariation = Math.random() * 0.6 - 0.3; // Between -0.3 and +0.3
-            const weight = baseWeight + (i / 60) * 3 + randomVariation;
+        // If no weight logs found, try to get at least current weight from profile
+        if (!weightLogsData || weightLogsData.length === 0) {
+          const profileResponse = await fetch('/api/profile');
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
             
-            sampleWeightLogs.push({
-              date: date.toISOString().split('T')[0],
-              weight: Number(weight.toFixed(1))
-            });
+            if (profileData.currentWeight) {
+              // Create at least one weight log with current weight
+              const today = new Date().toISOString().split('T')[0];
+              weightLogsData.push({
+                date: today,
+                weight: profileData.currentWeight
+              });
+            }
           }
         }
         
-        setWeightLogs(sampleWeightLogs);
+        setWeightLogs(weightLogsData);
         
         // Calculate statistics
-        calculateStats(workoutsData, sampleWeightLogs);
+        calculateStats(workoutsData, weightLogsData);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to load statistics data');
@@ -181,6 +181,21 @@ export default function StatisticsPage() {
     
     const averageWorkoutsPerWeek = workouts.length / weeksPassed;
     
+    // Calculate heart rate stats
+    const workoutsWithHeartRate = workouts.filter(workout => 
+      workout.heart_rate !== null && workout.heart_rate !== undefined);
+      
+    let avgHeartRate = 0;
+    let maxHeartRate = 0;
+    
+    if (workoutsWithHeartRate.length > 0) {
+      const sum = workoutsWithHeartRate.reduce((acc, workout) => 
+        acc + (workout.heart_rate || 0), 0);
+      
+      avgHeartRate = Math.round(sum / workoutsWithHeartRate.length);
+      maxHeartRate = Math.max(...workoutsWithHeartRate.map(w => w.heart_rate || 0));
+    }
+    
     // Set the calculated stats
     setStats({
       totalWorkouts: workouts.length,
@@ -190,7 +205,9 @@ export default function StatisticsPage() {
       weightChange: weightChange,
       averageWorkoutsPerWeek: parseFloat(averageWorkoutsPerWeek.toFixed(1)),
       mostFrequentExercise: mostFrequentExercise,
-      heaviestWeight: heaviestWeight
+      heaviestWeight: heaviestWeight,
+      avgHeartRate: avgHeartRate,
+      maxHeartRate: maxHeartRate
     });
   };
   
@@ -318,6 +335,32 @@ export default function StatisticsPage() {
     } else {
       return 'Other';
     }
+  };
+  
+  // Prepare heart rate chart data
+  const getHeartRateChartData = () => {
+    const filteredWorkouts = getFilteredData(workouts, 'date')
+      .filter(workout => workout.heart_rate !== null && workout.heart_rate !== undefined);
+    
+    // Sort by date
+    filteredWorkouts.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    return {
+      labels: filteredWorkouts.map(workout => {
+        const date = new Date(workout.date);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }),
+      datasets: [
+        {
+          label: 'Heart Rate (BPM)',
+          data: filteredWorkouts.map(workout => workout.heart_rate),
+          borderColor: '#EF4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          tension: 0.2,
+          fill: true
+        }
+      ]
+    };
   };
   
   if (status === 'unauthenticated') {
@@ -468,6 +511,29 @@ export default function StatisticsPage() {
               </div>
             </div>
             
+            {/* Heart Rate Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="card">
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Average Heart Rate</h3>
+                <div className="flex items-center">
+                  <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-full mr-3">
+                    <FaHeartbeat className="text-red-600 dark:text-red-400" />
+                  </div>
+                  <span className="font-bold">{stats.avgHeartRate ? `${stats.avgHeartRate} BPM` : 'No data'}</span>
+                </div>
+              </div>
+              
+              <div className="card">
+                <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Max Heart Rate</h3>
+                <div className="flex items-center">
+                  <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-full mr-3">
+                    <FaHeartbeat className="text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <span className="font-bold">{stats.maxHeartRate ? `${stats.maxHeartRate} BPM` : 'No data'}</span>
+                </div>
+              </div>
+            </div>
+            
             {/* Weight progress chart */}
             <div className="card mb-8">
               <h2 className="text-xl font-semibold mb-6">Weight Progress</h2>
@@ -558,6 +624,44 @@ export default function StatisticsPage() {
                     <p className="text-gray-500">No exercise data available</p>
                   )}
                 </div>
+              </div>
+            </div>
+            
+            {/* Heart Rate chart */}
+            <div className="card mb-8">
+              <h2 className="text-xl font-semibold mb-6">Heart Rate Trends</h2>
+              <div className="h-80">
+                {workouts.some(w => w.heart_rate) ? (
+                  <Line 
+                    data={getHeartRateChartData()} 
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                        },
+                        tooltip: {
+                          mode: 'index',
+                          intersect: false,
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: false,
+                          title: {
+                            display: true,
+                            text: 'Heart Rate (BPM)'
+                          }
+                        }
+                      },
+                    }}
+                  />
+                ) : (
+                  <div className="flex justify-center items-center h-full">
+                    <p className="text-gray-500">No heart rate data available. Add your heart rate when logging workouts.</p>
+                  </div>
+                )}
               </div>
             </div>
           </>

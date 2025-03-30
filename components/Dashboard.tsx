@@ -8,7 +8,9 @@ import {
   FaWeight, 
   FaCalendarCheck,
   FaPlus,
-  FaSpinner
+  FaSpinner,
+  FaUser,
+  FaChartLine
 } from 'react-icons/fa';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { Line } from 'react-chartjs-2';
@@ -24,6 +26,7 @@ interface Workout {
   name: string;
   date: string;
   notes: string | null;
+  heart_rate: number | null;
   exercises?: Exercise[];
 }
 
@@ -62,26 +65,52 @@ const Dashboard = () => {
   // Fetch user's workouts
   useEffect(() => {
     const fetchWorkouts = async () => {
-      if (status !== 'authenticated') return;
+      if (status !== 'authenticated') {
+        console.log('Not fetching workouts - user not authenticated');
+        return;
+      }
+      
+      console.log('Fetching workouts, auth status:', status);
       
       try {
         setLoading(prev => ({ ...prev, workouts: true }));
+        setError(null);
         
-        const response = await fetch('/api/workouts');
-        if (!response.ok) throw new Error('Failed to fetch workouts');
+        console.log('Making fetch request to /api/workouts');
+        
+        const response = await fetch('/api/workouts', {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+        
+        console.log('Fetch response status:', response.status);
+        
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('Response error:', response.status, errorData);
+          throw new Error(`Failed to fetch workouts: ${response.status} ${errorData}`);
+        }
         
         const data = await response.json();
+        console.log(`Retrieved ${data.length} workouts`);
+        
         setWorkouts(data);
         
         // Update stats
+        const avgHeartRate = calculateAverageHeartRate(data);
+        
         setStats(prev => ({
           ...prev,
           totalWorkouts: data.length,
-          activeDays: new Set(data.map((w: Workout) => w.date.substr(0, 10))).size
+          activeDays: new Set(data.map((w: Workout) => w.date.substr(0, 10))).size,
+          avgHeartRate: avgHeartRate
         }));
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching workouts:', err);
-        setError('Failed to load workouts. Please try again later.');
+        setError(`Failed to load workouts: ${err.message}`);
       } finally {
         setLoading(prev => ({ ...prev, workouts: false }));
       }
@@ -89,6 +118,18 @@ const Dashboard = () => {
     
     fetchWorkouts();
   }, [status]);
+
+  // Calculate average heart rate from workout data
+  const calculateAverageHeartRate = (workoutData: Workout[]): number => {
+    const workoutsWithHeartRate = workoutData.filter(w => w.heart_rate !== null && w.heart_rate !== undefined);
+    
+    if (workoutsWithHeartRate.length === 0) {
+      return 0;
+    }
+    
+    const sum = workoutsWithHeartRate.reduce((acc, workout) => acc + (workout.heart_rate || 0), 0);
+    return Math.round(sum / workoutsWithHeartRate.length);
+  };
 
   // Fetch user profile and weight logs
   useEffect(() => {
@@ -98,7 +139,10 @@ const Dashboard = () => {
       try {
         setLoading(prev => ({ ...prev, profile: true }));
         
-        const response = await fetch('/api/profile');
+        const response = await fetch('/api/profile', {
+          // Add cache: 'no-store' to avoid caching the profile data
+          cache: 'no-store'
+        });
         if (!response.ok) throw new Error('Failed to fetch profile');
         
         const data = await response.json();
@@ -122,50 +166,53 @@ const Dashboard = () => {
 
   // Generate chart data based on weight logs
   useEffect(() => {
-    const generateChartData = async () => {
+    const fetchWeightLogs = async () => {
       if (status !== 'authenticated') return;
       
       try {
         setLoading(prev => ({ ...prev, progress: true }));
         
-        // This would typically come from your API
-        // For now, let's generate sample data
-        const mockWeightData = [
-          { date: '2023-01-01', weight: 80 },
-          { date: '2023-02-01', weight: 79 },
-          { date: '2023-03-01', weight: 78 },
-          { date: '2023-04-01', weight: 77.5 },
-          { date: '2023-05-01', weight: 76 },
-          { date: '2023-06-01', weight: 75 }
-        ];
+        // Fetch actual weight logs from API with no-store cache policy
+        const response = await fetch('/api/weight-logs', {
+          cache: 'no-store'
+        });
+        if (!response.ok) throw new Error('Failed to fetch weight logs');
         
-        setWeightLogs(mockWeightData);
+        const weightData = await response.json();
         
-        // Format data for chart
-        const chartData = {
-          labels: mockWeightData.map(log => {
-            const date = new Date(log.date);
-            return date.toLocaleString('default', { month: 'short' });
-          }),
-          datasets: [
-            {
-              label: 'Weight (kg)',
-              data: mockWeightData.map(log => log.weight),
-              borderColor: '#3B82F6',
-              backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            }
-          ],
-        };
-        
-        setChartData(chartData);
+        if (weightData && weightData.length > 0) {
+          setWeightLogs(weightData);
+          
+          // Format data for chart
+          const chartData = {
+            labels: weightData.map((log: WeightLog) => {
+              const date = new Date(log.date);
+              return date.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+            }),
+            datasets: [
+              {
+                label: 'Weight (kg)',
+                data: weightData.map((log: WeightLog) => log.weight),
+                borderColor: '#3B82F6',
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                tension: 0.3,
+              }
+            ],
+          };
+          
+          setChartData(chartData);
+        } else {
+          // No weight logs, empty chart
+          setChartData(null);
+        }
       } catch (err) {
-        console.error('Error generating chart data:', err);
+        console.error('Error fetching weight logs:', err);
       } finally {
         setLoading(prev => ({ ...prev, progress: false }));
       }
     };
     
-    generateChartData();
+    fetchWeightLogs();
   }, [status]);
 
   return (
@@ -196,9 +243,9 @@ const Dashboard = () => {
           <StatCard 
             icon={<FaHeartbeat />} 
             title="Avg. Heart Rate" 
-            value="--"
+            value={stats.avgHeartRate ? `${stats.avgHeartRate} BPM` : '--'}
             subtitle="BPM"
-            loading={loading.profile}
+            loading={loading.workouts}
           />
           <StatCard 
             icon={<FaWeight />} 
@@ -424,10 +471,14 @@ const ProgressPanel = ({
   if (!chartData) {
     return (
       <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <h3 className="text-xl font-semibold mb-2">No Data Yet</h3>
+        <h3 className="text-xl font-semibold mb-2">No Weight Data Yet</h3>
         <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Start tracking your weight to see progress over time.
+          Your weight progress will appear here once you update your weight in your profile.
         </p>
+        <Link href="/profile" className="btn-primary inline-flex items-center">
+          <FaUser className="mr-2" />
+          Go to Profile
+        </Link>
       </div>
     );
   }
@@ -435,7 +486,12 @@ const ProgressPanel = ({
   return (
     <div>
       <div className="card">
-        <h3 className="text-lg md:text-xl font-semibold mb-4">Weight Progress</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg md:text-xl font-semibold">Weight Progress</h3>
+          <Link href="/statistics" className="text-primary hover:text-blue-700 text-sm">
+            View Detailed Stats
+          </Link>
+        </div>
         <div className="h-64 md:h-80">
           <Line 
             data={chartData} 
@@ -445,8 +501,22 @@ const ProgressPanel = ({
               scales: {
                 y: {
                   beginAtZero: false,
+                  ticks: {
+                    callback: function(value) {
+                      return value + ' kg';
+                    }
+                  }
                 },
               },
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return `Weight: ${context.parsed.y} kg`;
+                    }
+                  }
+                }
+              }
             }} 
           />
         </div>
@@ -464,11 +534,6 @@ const SchedulePanel = () => {
       </p>
     </div>
   );
-};
-
-// Export for use in other components
-const FaChartLine = () => {
-  return <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M496 384H64V80c0-8.84-7.16-16-16-16H16C7.16 64 0 71.16 0 80v336c0 17.67 14.33 32 32 32h464c8.84 0 16-7.16 16-16v-32c0-8.84-7.16-16-16-16zM464 96H345.94c-21.38 0-32.09 25.85-16.97 40.97l32.4 32.4L288 242.75l-73.37-73.37c-12.5-12.5-32.76-12.5-45.25 0l-68.69 68.69c-6.25 6.25-6.25 16.38 0 22.63l22.62 22.62c6.25 6.25 16.38 6.25 22.63 0L192 237.25l73.37 73.37c12.5 12.5 32.76 12.5 45.25 0l96-96 32.4 32.4c15.12 15.12 40.97 4.41 40.97-16.97V112c.01-8.84-7.15-16-15.99-16z"></path></svg>;
 };
 
 export default Dashboard; 
