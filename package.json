@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@types/node": "^20.10.5",
+    "@types/pg": "^8.11.0",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "autoprefixer": "^10.4.16",
@@ -25,6 +26,7 @@
     "mysql2": "^3.9.2",
     "next": "14.1.0",
     "next-auth": "^4.24.11",
+    "pg": "^8.11.3",
     "postcss": "^8.4.32",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.2.0",
