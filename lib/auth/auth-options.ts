@@ -33,13 +33,13 @@ export const authOptions: NextAuthOptions = {
           
           // Handle different database environments
           if (isProduction) {
-            // Production: PostgreSQL
+            // Production: MySQL
             try {
-              const { mysqlDb } = await import('@/lib/pg-db');
+              const { mysqlDb } = await import('@/lib/mysql-db');
               
-              // Query the PostgreSQL database
+              // Query the MySQL database
               const dbUser = await mysqlDb.queryRow(
-                "SELECT * FROM users WHERE email = $1",
+                "SELECT * FROM users WHERE email = ?",
                 [email]
               );
               
@@ -60,7 +60,7 @@ export const authOptions: NextAuthOptions = {
                 name: user.name
               };
             } catch (error) {
-              console.error('PostgreSQL auth error:', error);
+              console.error('MySQL auth error:', error);
               return null;
             }
           } else {
