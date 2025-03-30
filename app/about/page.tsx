@@ -163,11 +163,11 @@ export default function AboutPage() {
               <div className="bg-gray-200 dark:bg-gray-700 rounded-full w-32 h-32 mx-auto mb-4 flex items-center justify-center">
                 <span className="text-4xl">👨‍💻</span>
               </div>
-              <h3 className="text-xl font-semibold">John Doe</h3>
+              <h3 className="text-xl font-semibold">Nandakishore NP</h3>
               <p className="text-gray-600 dark:text-gray-400">Founder & Developer</p>
             </div>
             
-            <div className="text-center">
+            {/* <div className="text-center">
               <div className="bg-gray-200 dark:bg-gray-700 rounded-full w-32 h-32 mx-auto mb-4 flex items-center justify-center">
                 <span className="text-4xl">👩‍💻</span>
               </div>
@@ -189,7 +189,7 @@ export default function AboutPage() {
               </div>
               <h3 className="text-xl font-semibold">Sarah Williams</h3>
               <p className="text-gray-600 dark:text-gray-400">Nutrition Specialist</p>
-            </div>
+            </div> */}
           </div>
         </section>
       </main>

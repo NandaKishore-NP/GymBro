@@ -17,6 +17,8 @@ import { Line } from 'react-chartjs-2';
 import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import RecommendedWorkouts from './RecommendedWorkouts';
+import UpcomingWorkouts from './UpcomingWorkouts';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
@@ -326,48 +328,63 @@ const Dashboard = () => {
         </div>
       </motion.div>
       
-      {/* Tabs Section */}
-      <div className="mb-6 flex flex-wrap overflow-x-auto space-x-2 pb-2">
-        <TabButton 
-          active={activeTab === 'workouts'} 
-          onClick={() => setActiveTab('workouts')} 
-          icon={<FaDumbbell />} 
-          text="Workouts"
-        />
-        <TabButton 
-          active={activeTab === 'progress'} 
-          onClick={() => setActiveTab('progress')} 
-          icon={<FaChartLine />} 
-          text="Progress"
-        />
-        <TabButton 
-          active={activeTab === 'schedule'} 
-          onClick={() => setActiveTab('schedule')} 
-          icon={<FaCalendarCheck />} 
-          text="Schedule"
-        />
-      </div>
-      
-      {/* Content Section */}
-      <div className="pb-6">
-        {activeTab === 'workouts' && (
-          <WorkoutsPanel 
-            workouts={workouts} 
-            loading={loading.workouts} 
-            error={error}
-          />
-        )}
-        
-        {activeTab === 'progress' && (
-          <ProgressPanel 
-            chartData={chartData}
-            loading={loading.progress}
-          />
-        )}
-        
-        {activeTab === 'schedule' && (
-          <SchedulePanel />
-        )}
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column (2/3 width) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Tabs Section */}
+          <div className="mb-6 flex flex-wrap overflow-x-auto space-x-2 pb-2">
+            <TabButton 
+              active={activeTab === 'workouts'} 
+              onClick={() => setActiveTab('workouts')} 
+              icon={<FaDumbbell />} 
+              text="Workouts"
+            />
+            <TabButton 
+              active={activeTab === 'progress'} 
+              onClick={() => setActiveTab('progress')} 
+              icon={<FaChartLine />} 
+              text="Progress"
+            />
+            <TabButton 
+              active={activeTab === 'schedule'} 
+              onClick={() => setActiveTab('schedule')} 
+              icon={<FaCalendarCheck />} 
+              text="Schedule"
+            />
+          </div>
+          
+          {/* Content Section */}
+          <div className="pb-6">
+            {activeTab === 'workouts' && (
+              <WorkoutsPanel 
+                workouts={workouts} 
+                loading={loading.workouts} 
+                error={error}
+              />
+            )}
+            
+            {activeTab === 'progress' && (
+              <ProgressPanel 
+                chartData={chartData}
+                loading={loading.progress}
+              />
+            )}
+            
+            {activeTab === 'schedule' && (
+              <SchedulePanel />
+            )}
+          </div>
+        </div>
+
+        {/* Right Column (1/3 width) */}
+        <div className="space-y-6">
+          {/* Daily Workout Recommendation */}
+          <RecommendedWorkouts />
+          
+          {/* Upcoming Workouts */}
+          <UpcomingWorkouts />
+        </div>
       </div>
     </div>
   );
