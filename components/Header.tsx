@@ -96,9 +96,39 @@ export default function Header() {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <Link href="/">
           <div className="flex items-center">
-            <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent text-transparent bg-clip-text">
-              GymBro
-            </span>
+            <div className="logo-container relative">
+              <div className="flex items-center">
+                <svg width="40" height="40" viewBox="0 0 40 40" className="mr-2">
+                  <defs>
+                    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#4F46E5" />
+                      <stop offset="100%" stopColor="#06B6D4" />
+                    </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="2" result="glow" />
+                      <feMerge>
+                        <feMergeNode in="glow" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <circle cx="20" cy="20" r="18" stroke="url(#logoGradient)" strokeWidth="2" fill="none" className="animate-pulse-slow" />
+                  <path 
+                    d="M10 16 L10 30 M10 20 L14 20 M18 16 L18 30 M14 16 L22 16 M26 16 C30 16 30 20 26 20 C30 20 30 24 26 24 L22 24 L22 16" 
+                    stroke="url(#logoGradient)" 
+                    strokeWidth="2.5" 
+                    strokeLinecap="round" 
+                    fill="none"
+                    filter="url(#glow)"
+                    className="dark:stroke-white" />
+                </svg>
+                <span className="text-2xl font-extrabold">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">Gym</span>
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-accent to-primary">Bro</span>
+                </span>
+              </div>
+              <div className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-accent transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+            </div>
           </div>
         </Link>
         
@@ -106,7 +136,7 @@ export default function Header() {
           {/* Desktop Navigation */}
           <Link 
             href="/" 
-            className={`px-3 py-2 rounded-md text-sm font-medium ${
+            className={`nav-link nav-item-animation ${
               pathname === '/' 
                 ? 'text-primary' 
                 : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary'
@@ -117,7 +147,7 @@ export default function Header() {
           
           <Link 
             href="/workouts" 
-            className={`px-3 py-2 rounded-md text-sm font-medium ${
+            className={`nav-link nav-item-animation ${
               pathname === '/workouts' || pathname?.startsWith('/workouts/') 
                 ? 'text-primary' 
                 : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary'
@@ -128,7 +158,7 @@ export default function Header() {
           
           <Link 
             href="/workouts/library" 
-            className={`px-3 py-2 rounded-md text-sm font-medium ${
+            className={`nav-link nav-item-animation ${
               pathname === '/workouts/library' || pathname?.startsWith('/workouts/library/') 
                 ? 'text-primary' 
                 : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary'
@@ -139,7 +169,7 @@ export default function Header() {
           
           <Link 
             href="/statistics" 
-            className={`px-3 py-2 rounded-md text-sm font-medium ${
+            className={`nav-link nav-item-animation ${
               pathname === '/statistics' 
                 ? 'text-primary' 
                 : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary'
@@ -150,7 +180,7 @@ export default function Header() {
           
           <Link 
             href="/partners" 
-            className={`px-3 py-2 rounded-md text-sm font-medium ${
+            className={`nav-link nav-item-animation ${
               pathname === '/partners' || pathname?.startsWith('/partners/') 
                 ? 'text-primary' 
                 : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary'
@@ -161,7 +191,7 @@ export default function Header() {
           
           <Link 
             href="/about" 
-            className={`px-3 py-2 rounded-md text-sm font-medium ${
+            className={`nav-link nav-item-animation ${
               pathname === '/about' 
                 ? 'text-primary' 
                 : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary'
@@ -172,7 +202,7 @@ export default function Header() {
           
           <Link 
             href="/help" 
-            className={`px-3 py-2 rounded-md text-sm font-medium ${
+            className={`nav-link nav-item-animation ${
               pathname === '/help' 
                 ? 'text-primary' 
                 : 'text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary'
@@ -187,12 +217,12 @@ export default function Header() {
           {session ? (
             <div className="relative profile-menu-container">
               <button 
-                className="flex items-center focus:outline-none"
+                className="flex items-center focus:outline-none transition-transform duration-300 hover:scale-105"
                 onClick={toggleProfileMenu}
                 aria-expanded={isProfileMenuOpen}
                 aria-haspopup="true"
               >
-                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-200 overflow-hidden">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/10 to-accent/10 dark:from-primary/20 dark:to-accent/20 flex items-center justify-center text-gray-700 dark:text-gray-200 overflow-hidden shadow-md border-2 border-white dark:border-gray-700">
                   {session.user?.image ? (
                     <Image 
                       src={session.user.image} 
@@ -202,14 +232,14 @@ export default function Header() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <FaUser />
+                    <FaUser className="text-primary dark:text-accent" />
                   )}
                 </div>
               </button>
               
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-10">
-                  <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-1 z-10 border border-gray-100 dark:border-gray-700 transform transition-all duration-200 origin-top-right">
+                  <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                       {session.user?.name}
                     </p>
@@ -220,22 +250,22 @@ export default function Header() {
                   
                   <Link 
                     href="/profile" 
-                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                     onClick={() => setIsProfileMenuOpen(false)}
                   >
                     <div className="flex items-center">
-                      <FaUser className="mr-2" />
+                      <FaUser className="mr-2 text-primary dark:text-accent" />
                       <span>Profile</span>
                     </div>
                   </Link>
                   
                   <Link 
                     href="/settings" 
-                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                     onClick={() => setIsProfileMenuOpen(false)}
                   >
                     <div className="flex items-center">
-                      <FaCog className="mr-2" />
+                      <FaCog className="mr-2 text-primary dark:text-accent" />
                       <span>Settings</span>
                     </div>
                   </Link>
@@ -245,10 +275,10 @@ export default function Header() {
                       setIsProfileMenuOpen(false);
                       handleSignOut();
                     }}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                   >
                     <div className="flex items-center">
-                      <FaSignOutAlt className="mr-2" />
+                      <FaSignOutAlt className="mr-2 text-red-500" />
                       <span>Sign out</span>
                     </div>
                   </button>
@@ -258,7 +288,7 @@ export default function Header() {
           ) : (
             <Link 
               href="/auth/login"
-              className="px-4 py-2 rounded-md bg-primary text-white font-medium text-sm hover:bg-primary-dark"
+              className="btn btn-primary"
             >
               Log In
             </Link>
@@ -268,7 +298,7 @@ export default function Header() {
           
           {/* Mobile Menu Button */}
           <button
-            className="ml-4 md:hidden p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="ml-4 md:hidden p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
             onClick={toggleMenu}
             aria-label="Toggle menu"
           >
